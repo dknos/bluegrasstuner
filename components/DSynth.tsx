@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
+import { SynthShell, Knob, KnobRow, Keys, Rocker, Engrave, PANEL } from './synthkit';
 
 interface DSynthProps {
   onClose: () => void;
@@ -345,166 +346,107 @@ const DSynth: React.FC<DSynthProps> = ({ onClose }) => {
     const engine = useRef<MiniMoogEngine | null>(null);
     const [activeNotes, setActiveNotes] = useState<number[]>([]);
     const [isHold, setIsHold] = useState(false);
-    
-    // UI State for knobs (to reflect in UI)
+
+    // Controlled knob state (mirrors engine)
     const [cutoff, setCutoff] = useState(1000);
     const [emphasis, setEmphasis] = useState(0);
     const [glide, setGlide] = useState(0);
     const [contourAmt, setContourAmt] = useState(5);
-    
-    // Range State
-    const [range1, setRange1] = useState(3); // 8'
+    const [range1, setRange1] = useState(3);
     const [range2, setRange2] = useState(3);
     const [range3, setRange3] = useState(3);
+    const [wave1, setWave1] = useState(1);
+    const [wave2, setWave2] = useState(1);
+    const [wave3, setWave3] = useState(1);
+    const [vol1, setVol1] = useState(7);
+    const [vol2, setVol2] = useState(5);
+    const [vol3, setVol3] = useState(0);
+    const [det2, setDet2] = useState(0);
+    const [det3, setDet3] = useState(0);
+    const [attA, setAttA] = useState(0.1);
+    const [decA, setDecA] = useState(0.5);
+    const [susA, setSusA] = useState(0.8);
+    const [attF, setAttF] = useState(0.2);
+    const [decF, setDecF] = useState(0.5);
+    const [susF, setSusF] = useState(0.5);
 
     useEffect(() => {
         engine.current = new MiniMoogEngine();
-        return () => { engine.current?.ctx.close(); }
+        return () => { engine.current?.ctx.close(); };
     }, []);
 
-    const updateParam = (param: string, val: number) => {
-        engine.current?.setParam(param, val);
-        if (param === 'cutoff') setCutoff(val);
-        if (param === 'res') setEmphasis(val);
-        if (param === 'glide') setGlide(val);
-        if (param === 'filterEnvAmt') setContourAmt(val);
-    };
-
-    const updateRange = (osc: number, rangeIdx: number) => {
-        engine.current?.setRange(osc, rangeIdx);
-        if(osc === 1) setRange1(rangeIdx);
-        if(osc === 2) setRange2(rangeIdx);
-        if(osc === 3) setRange3(rangeIdx);
-    };
+    const set = (param: string, val: number) => engine.current?.setParam(param, val);
 
     const handleNoteOn = (note: number) => {
         if (!engine.current) return;
         if (!activeNotes.includes(note)) {
-            const newNotes = [...activeNotes, note];
-            setActiveNotes(newNotes);
-            engine.current.noteOn(note);
-        } else if (isHold) {
+            setActiveNotes([...activeNotes, note]);
             engine.current.noteOn(note);
         }
     };
-
     const handleNoteOff = (note: number) => {
         if (isHold) return;
-        const newNotes = activeNotes.filter(n => n !== note);
-        setActiveNotes(newNotes);
-        if (newNotes.length > 0) {
-            engine.current?.noteOn(newNotes[newNotes.length - 1]);
-        } else {
-            engine.current?.noteOff();
-        }
+        const left = activeNotes.filter(n => n !== note);
+        setActiveNotes(left);
+        if (left.length > 0) engine.current?.noteOn(left[left.length - 1]);
+        else engine.current?.noteOff();
     };
 
-    const loadPreset = (preset: any) => {
-        if (!engine.current) return;
-        const s = preset.settings;
-        setCutoff(s.cutoff || 1000); updateParam('cutoff', s.cutoff || 1000);
-        setEmphasis(s.res || 0); updateParam('res', s.res || 0);
-        // ... Load other params logic
-    };
-
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-0 md:p-4 animate-fade-in font-sans touch-none select-none">
-            {/* Added extra top padding to avoid close button overlap */}
-            <div className="relative w-full max-w-6xl h-full md:h-auto bg-[#eaddcf] rounded-xl shadow-2xl overflow-hidden border-[12px] border-[#3E2723] flex flex-col pt-14 md:pt-0">
-                
-                {/* --- HEADER --- */}
-                <div className="min-h-14 bg-black flex flex-wrap items-center justify-between px-4 border-b-4 border-gray-600 pl-16 py-2 gap-2 h-auto">
-                    <div className="flex items-center gap-3">
-                        <span className="text-white font-serif text-xl italic font-bold tracking-widest hidden sm:block">Minimoog</span>
-                        <div className="bg-white text-black text-[10px] font-bold px-1 rounded">MODEL D</div>
-                    </div>
-                    <div className="flex flex-wrap gap-4 items-center">
-                        <div className="flex flex-wrap gap-2">
-                            {PRESETS.map((p, i) => (
-                                <button key={i} onClick={() => loadPreset(p)} className="px-2 py-1 bg-gray-800 text-gray-300 text-[9px] rounded border border-gray-600 hover:text-white uppercase whitespace-nowrap">{p.name}</button>
-                            ))}
-                        </div>
-                        <button 
-                            onClick={() => setIsHold(!isHold)}
-                            className={`px-3 py-1 rounded border text-xs font-bold ${isHold ? 'bg-yellow-600 text-black border-yellow-400 animate-pulse' : 'bg-gray-800 text-gray-400 border-gray-600'}`}
-                        >
-                            HOLD
-                        </button>
-                    </div>
-                </div>
-
-                {/* --- MAIN PANEL --- */}
-                <div className="flex-1 bg-[#1a1a1a] p-2 flex flex-col md:flex-row gap-1 overflow-y-auto">
-                    
-                    {/* OSC BANK */}
-                    <div className="flex-[2] bg-[#1a1a1a] border-r-2 border-gray-600 p-2 flex flex-col gap-2">
-                        <h3 className="text-center text-gray-400 text-[10px] uppercase font-bold border-b border-gray-700 pb-1">Oscillators</h3>
-                        <div className="flex justify-around items-end">
-                            <div className="flex flex-col items-center gap-2">
-                                <span className="text-gray-500 text-[9px]">OSC 1</span>
-                                <RockerSwitch label="Range" options={RANGES} value={range1} onChange={(i) => updateRange(1, i)} />
-                                <MoogKnob label="Freq" value={0} min={-12} max={12} onChange={()=>{}} size="sm" />
-                                <RockerSwitch label="Wave" options={['Tri','Saw','Sqr']} value={1} onChange={(v) => engine.current?.setWaveform(1, v)} />
-                                <MoogKnob label="Vol" value={7} min={0} max={10} onChange={(v) => updateParam('vco1Vol', v/10)} />
-                            </div>
-                            <div className="w-px h-32 bg-gray-700"></div>
-                            <div className="flex flex-col items-center gap-2">
-                                <span className="text-gray-500 text-[9px]">OSC 2</span>
-                                <RockerSwitch label="Range" options={RANGES} value={range2} onChange={(i) => updateRange(2, i)} />
-                                <MoogKnob label="Detune" value={0} min={-7} max={7} onChange={(v) => updateParam('vco2Detune', v)} size="sm" />
-                                <RockerSwitch label="Wave" options={['Tri','Saw','Sqr']} value={1} onChange={(v) => engine.current?.setWaveform(2, v)} />
-                                <MoogKnob label="Vol" value={5} min={0} max={10} onChange={(v) => updateParam('vco2Vol', v/10)} />
-                            </div>
-                            <div className="w-px h-32 bg-gray-700"></div>
-                            <div className="flex flex-col items-center gap-2">
-                                <span className="text-gray-500 text-[9px]">OSC 3</span>
-                                <RockerSwitch label="Range" options={RANGES} value={range3} onChange={(i) => updateRange(3, i)} />
-                                <MoogKnob label="Detune" value={0} min={-7} max={7} onChange={(v) => updateParam('vco3Detune', v)} size="sm" />
-                                <RockerSwitch label="Wave" options={['Tri','Saw','Sqr']} value={1} onChange={(v) => engine.current?.setWaveform(3, v)} />
-                                <MoogKnob label="Vol" value={0} min={0} max={10} onChange={(v) => updateParam('vco3Vol', v/10)} />
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* FILTER & MOD */}
-                    <div className="flex-[1.5] bg-[#1a1a1a] border-r-2 border-gray-600 p-2 flex flex-col gap-4">
-                        <h3 className="text-center text-gray-400 text-[10px] uppercase font-bold border-b border-gray-700 pb-1">Filter & Mod</h3>
-                        <div className="flex justify-around">
-                            <MoogKnob label="Cutoff" value={cutoff} min={50} max={12000} onChange={(v) => updateParam('cutoff', v)} size="lg" />
-                            <MoogKnob label="Emphasis" value={emphasis} min={0} max={20} onChange={(v) => updateParam('res', v)} size="lg" />
-                        </div>
-                        <div className="flex justify-around">
-                            {/* Filter Contour Amount */}
-                            <MoogKnob label="Contour" value={contourAmt} min={0} max={10} onChange={(v) => updateParam('filterEnvAmt', v)} />
-                            <MoogKnob label="Glide" value={glide} min={0} max={1} onChange={(v) => updateParam('glide', v)} />
-                        </div>
-                    </div>
-
-                    {/* CONTOURS */}
-                    <div className="flex-[1.5] bg-[#1a1a1a] p-2 flex flex-col gap-2">
-                        <h3 className="text-center text-gray-400 text-[10px] uppercase font-bold border-b border-gray-700 pb-1">Contours</h3>
-                        <div className="flex gap-2 justify-center">
-                            <div className="flex flex-col items-center bg-[#222] p-1 rounded">
-                                <span className="text-[8px] text-gray-500 mb-1">LOUDNESS</span>
-                                <MoogKnob label="Att" value={0.1} min={0.01} max={5} onChange={(v) => updateParam('attA', v)} size="sm" />
-                                <MoogKnob label="Dec" value={0.5} min={0.1} max={5} onChange={(v) => updateParam('decA', v)} size="sm" />
-                                <MoogKnob label="Sus" value={0.8} min={0} max={1} onChange={(v) => updateParam('susA', v)} size="sm" />
-                            </div>
-                            <div className="flex flex-col items-center bg-[#222] p-1 rounded">
-                                <span className="text-[8px] text-gray-500 mb-1">FILTER</span>
-                                <MoogKnob label="Att" value={0.2} min={0.01} max={5} onChange={(v) => updateParam('attF', v)} size="sm" />
-                                <MoogKnob label="Dec" value={0.5} min={0.1} max={5} onChange={(v) => updateParam('decF', v)} size="sm" />
-                                <MoogKnob label="Sus" value={0.5} min={0} max={1} onChange={(v) => updateParam('susF', v)} size="sm" />
-                            </div>
-                        </div>
-                    </div>
-
-                </div>
-
-                {/* --- KEYBOARD --- */}
-                <Keyboard activeNotes={activeNotes} onNoteOn={handleNoteOn} onNoteOff={handleNoteOff} />
+    const OscControls = (n: number, range: number, setRange: (i: number) => void, wave: number, setWave: (i: number) => void,
+        vol: number, setVol: (v: number) => void, det?: number, setDet?: (v: number) => void) => (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: 10, borderRadius: 8, background: 'rgba(0,0,0,0.2)', boxShadow: `inset 0 0 0 1px ${PANEL.line}` }}>
+            <Engrave>Oscillator {n}</Engrave>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Rocker label="Range" options={RANGES} value={range} onChange={(i) => { setRange(i); engine.current?.setRange(n, i); }} />
+                <Rocker label="Wave" options={['Tri', 'Saw', 'Sqr']} value={wave} onChange={(i) => { setWave(i); engine.current?.setWaveform(n, i); }} />
+                <Knob label="Vol" value={vol} min={0} max={10} step={1} onChange={(v) => { setVol(v); set(`vco${n}Vol`, v / 10); }} size={52} />
+                {setDet && <Knob label="Detune" value={det!} min={-7} max={7} step={1} onChange={(v) => { setDet(v); set(`vco${n}Detune`, v); }} size={52} />}
             </div>
         </div>
+    );
+
+    return (
+        <SynthShell name="Minimoog D" tag="3-VCO · Ladder Filter" onClose={onClose} accent={PANEL.brass}>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                <button onClick={() => setIsHold(!isHold)} style={{
+                    padding: '7px 14px', borderRadius: 999, cursor: 'pointer', fontFamily: '"JetBrains Mono", monospace', fontSize: 10, letterSpacing: 1,
+                    border: `1px solid ${isHold ? PANEL.brass : PANEL.line}`, background: isHold ? PANEL.brass : 'transparent', color: isHold ? '#1a0d04' : PANEL.inkMute,
+                }}>HOLD</button>
+                {PRESETS.slice(0, 4).map((pr, i) => (
+                    <button key={i} onClick={() => { const c = pr.settings.cutoff || 1000; setCutoff(c); set('cutoff', c); const r = pr.settings.res || 0; setEmphasis(r); set('res', r); }}
+                        style={{ padding: '7px 10px', borderRadius: 8, cursor: 'pointer', fontFamily: '"JetBrains Mono", monospace', fontSize: 9, letterSpacing: 0.5, textTransform: 'uppercase', border: `1px solid ${PANEL.line}`, background: '#181410', color: PANEL.inkMute }}>{pr.name}</button>
+                ))}
+            </div>
+
+            {OscControls(1, range1, setRange1, wave1, setWave1, vol1, setVol1)}
+            {OscControls(2, range2, setRange2, wave2, setWave2, vol2, setVol2, det2, setDet2)}
+            {OscControls(3, range3, setRange3, wave3, setWave3, vol3, setVol3, det3, setDet3)}
+
+            <Engrave>Filter</Engrave>
+            <KnobRow>
+                <Knob label="Cutoff" value={cutoff} min={50} max={12000} log onChange={(v) => { setCutoff(v); set('cutoff', v); }} format={(v) => `${Math.round(v)}`} size={70} />
+                <Knob label="Emphasis" value={emphasis} min={0} max={20} onChange={(v) => { setEmphasis(v); set('res', v); }} size={70} />
+                <Knob label="Contour" value={contourAmt} min={0} max={10} onChange={(v) => { setContourAmt(v); set('filterEnvAmt', v); }} />
+                <Knob label="Glide" value={glide} min={0} max={1} step={0.01} onChange={(v) => { setGlide(v); set('glide', v); }} />
+            </KnobRow>
+
+            <Engrave>Loudness Envelope</Engrave>
+            <KnobRow>
+                <Knob label="Attack" value={attA} min={0.01} max={5} step={0.01} onChange={(v) => { setAttA(v); set('attA', v); }} format={(v) => `${v.toFixed(2)}s`} />
+                <Knob label="Decay" value={decA} min={0.1} max={5} step={0.01} onChange={(v) => { setDecA(v); set('decA', v); }} format={(v) => `${v.toFixed(2)}s`} />
+                <Knob label="Sustain" value={susA} min={0} max={1} step={0.01} onChange={(v) => { setSusA(v); set('susA', v); }} />
+            </KnobRow>
+
+            <Engrave>Filter Envelope</Engrave>
+            <KnobRow>
+                <Knob label="Attack" value={attF} min={0.01} max={5} step={0.01} onChange={(v) => { setAttF(v); set('attF', v); }} format={(v) => `${v.toFixed(2)}s`} />
+                <Knob label="Decay" value={decF} min={0.1} max={5} step={0.01} onChange={(v) => { setDecF(v); set('decF', v); }} format={(v) => `${v.toFixed(2)}s`} />
+                <Knob label="Sustain" value={susF} min={0} max={1} step={0.01} onChange={(v) => { setSusF(v); set('susF', v); }} />
+            </KnobRow>
+
+            <Engrave>Keyboard</Engrave>
+            <Keys octaves={2} startMidi={48} activeNotes={activeNotes} onNoteOn={handleNoteOn} onNoteOff={handleNoteOff} />
+        </SynthShell>
     );
 };
 

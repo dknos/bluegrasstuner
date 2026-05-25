@@ -277,3 +277,61 @@ export const NoteRow: React.FC<{ notes: number[]; onNote: (m: number) => void; a
 export const Engrave: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <span style={{ fontFamily: MONO, fontSize: 9, color: PANEL.inkMute, letterSpacing: 2.5, textTransform: 'uppercase', alignSelf: 'flex-start' }}>{children}</span>
 );
+
+// ── Toggle / rocker (multi-option selector) ─────────────────────────────────
+export const Rocker: React.FC<{ label?: string; options: string[]; value: number; onChange: (i: number) => void }> = ({ label, options, value, onChange }) => (
+  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+    {label && <span style={{ fontFamily: MONO, fontSize: 8, color: PANEL.inkMute, letterSpacing: 1.2, textTransform: 'uppercase' }}>{label}</span>}
+    <div style={{ display: 'flex', borderRadius: 6, overflow: 'hidden', boxShadow: `inset 0 0 0 1px ${PANEL.line}` }}>
+      {options.map((o, i) => (
+        <button key={o} onClick={() => onChange(i)} style={{
+          padding: '6px 9px', cursor: 'pointer', border: 'none', fontFamily: MONO, fontSize: 9, letterSpacing: 0.5,
+          background: value === i ? PANEL.brass : '#181410', color: value === i ? '#1a0d04' : PANEL.inkMute,
+        }}>{o}</button>
+      ))}
+    </div>
+  </div>
+);
+
+// ── Playable keyboard (press/release, multi-touch) ──────────────────────────
+export const Keys: React.FC<{
+  octaves?: number; startMidi?: number; activeNotes?: number[];
+  onNoteOn: (m: number) => void; onNoteOff: (m: number) => void; height?: number;
+}> = ({ octaves = 2, startMidi = 48, activeNotes = [], onNoteOn, onNoteOff, height = 110 }) => {
+  const isBlack = (m: number) => [1, 3, 6, 8, 10].includes(m % 12);
+  const keys: number[] = [];
+  for (let i = 0; i < octaves * 12 + 1; i++) keys.push(startMidi + i);
+  const whites = keys.filter((m) => !isBlack(m));
+  const wW = 100 / whites.length;
+  const on = (m: number) => activeNotes.includes(m);
+  return (
+    <div style={{ position: 'relative', width: '100%', height, borderRadius: '0 0 6px 6px', overflow: 'hidden', touchAction: 'none', boxShadow: `inset 0 0 0 1px ${PANEL.brassDark}`, background: '#0a0805' }}>
+      {/* white keys */}
+      <div style={{ display: 'flex', height: '100%' }}>
+        {whites.map((m) => (
+          <div key={m}
+            onPointerDown={(e) => { (e.target as Element).setPointerCapture?.(e.pointerId); onNoteOn(m); }}
+            onPointerUp={() => onNoteOff(m)} onPointerLeave={(e) => { if (e.buttons) onNoteOff(m); }}
+            onPointerEnter={(e) => { if (e.buttons) onNoteOn(m); }}
+            style={{ flex: 1, borderRight: '1px solid #2a2018', cursor: 'pointer',
+              background: on(m) ? 'linear-gradient(180deg,#f0d57f,#caa052)' : 'linear-gradient(180deg,#f4ecdc,#d8ccb4)',
+              boxShadow: 'inset 0 -6px 8px rgba(0,0,0,0.12)' }} />
+        ))}
+      </div>
+      {/* black keys */}
+      {keys.filter(isBlack).map((m) => {
+        const whitesBefore = keys.slice(0, keys.indexOf(m)).filter((x) => !isBlack(x)).length;
+        return (
+          <div key={m}
+            onPointerDown={(e) => { e.stopPropagation(); (e.target as Element).setPointerCapture?.(e.pointerId); onNoteOn(m); }}
+            onPointerUp={(e) => { e.stopPropagation(); onNoteOff(m); }}
+            onPointerLeave={(e) => { if (e.buttons) onNoteOff(m); }}
+            style={{ position: 'absolute', top: 0, height: '62%', width: `${wW * 0.62}%`,
+              left: `${whitesBefore * wW - wW * 0.31}%`, cursor: 'pointer', borderRadius: '0 0 3px 3px', zIndex: 2,
+              background: on(m) ? 'linear-gradient(180deg,#caa052,#8a6a2e)' : 'linear-gradient(180deg,#2a2620,#0c0a08)',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.6)' }} />
+        );
+      })}
+    </div>
+  );
+};
