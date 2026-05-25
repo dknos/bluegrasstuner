@@ -263,13 +263,6 @@ const App: React.FC = () => {
       }
   };
 
-  const cycleTuning = () => {
-      const keys = Object.keys(availableTunings);
-      if (keys.length < 2) return;
-      const idx = keys.indexOf(tuningName);
-      setTuningName(keys[(idx + 1) % keys.length]);
-  };
-
   const toggleDropdown = (e: React.MouseEvent<HTMLButtonElement>, type: string) => {
       e.stopPropagation();
       if (activeDropdown && activeDropdown.type === type) {
@@ -525,7 +518,7 @@ const App: React.FC = () => {
         isTuneByEar={isTuneByEar}
         deferredPrompt={deferredPrompt}
         onInstrument={setInstrument}
-        onCycleTuning={cycleTuning}
+        onSelectTuning={setTuningName}
         onPickString={handlePegClick}
         onToggleListen={() => (isListening ? stopListening() : startListening())}
         onToggleEar={() => setIsTuneByEar(!isTuneByEar)}

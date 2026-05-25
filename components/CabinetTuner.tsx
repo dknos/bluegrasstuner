@@ -26,7 +26,7 @@ interface CabinetTunerProps {
   isTuneByEar: boolean;
   deferredPrompt: any;
   onInstrument: (name: string) => void;
-  onCycleTuning: () => void;
+  onSelectTuning: (name: string) => void;
   onPickString: (index: number, freq: number) => void;
   onToggleListen: () => void;
   onToggleEar: () => void;
@@ -146,18 +146,18 @@ const StringRow: React.FC<{
 );
 
 const Toolbar: React.FC<{
-  tuningName: string; onCycleTuning: () => void; isListening: boolean; isToggling: boolean;
+  tuningName: string; onOpenTuning: () => void; isListening: boolean; isToggling: boolean;
   isTuneByEar: boolean; onToggleEar: () => void; onToggleListen: () => void; s: typeof SKIN[Cabinet];
-}> = ({ tuningName, onCycleTuning, isListening, isToggling, isTuneByEar, onToggleEar, onToggleListen, s }) => (
+}> = ({ tuningName, onOpenTuning, isListening, isToggling, isTuneByEar, onToggleEar, onToggleListen, s }) => (
   <div style={{
     display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
     width: '100%', paddingTop: 14, borderTop: `0.5px dashed ${s.line}`,
   }}>
-    <button onClick={onCycleTuning} style={{
-      background: 'transparent', border: 'none', cursor: 'pointer', padding: 0,
+    <button onClick={onOpenTuning} style={{
+      background: 'transparent', border: `1px solid ${s.line}`, borderRadius: 8, cursor: 'pointer', padding: '6px 10px',
       display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2, minWidth: 0, flex: 1,
     }}>
-      <span style={{ fontFamily: MONO, fontSize: 8, color: s.muted, letterSpacing: 1.2 }}>TUNING ⟳</span>
+      <span style={{ fontFamily: MONO, fontSize: 8, color: s.muted, letterSpacing: 1.2 }}>TUNING ▾</span>
       <span style={{ fontFamily: SERIF, fontSize: 15, color: s.ink, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tuningName}</span>
     </button>
 
@@ -200,8 +200,43 @@ const TopBar: React.FC<{
   );
 };
 
+// Tap-to-pick tuning list — mobile bottom sheet, vintage-styled per cabinet.
+const TuningSheet: React.FC<{
+  tunings: string[]; current: string; onSelect: (n: string) => void; onClose: () => void; s: typeof SKIN[Cabinet];
+}> = ({ tunings, current, onSelect, onClose, s }) => (
+  <div onClick={onClose} style={{
+    position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.55)',
+    backdropFilter: 'blur(2px)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: 14,
+  }}>
+    <div onClick={(e) => e.stopPropagation()} style={{
+      width: '100%', maxWidth: 420, maxHeight: '70vh', overflowY: 'auto', borderRadius: 18, padding: '12px 8px 18px',
+      background: s.tone === 'paper' ? 'linear-gradient(180deg,#f6ecca,#e7d6ac)' : 'linear-gradient(180deg,#2e1a0c,#180c05)',
+      boxShadow: `0 -10px 44px rgba(0,0,0,0.55), inset 0 0 0 1px ${s.accent}`,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '2px 10px 10px' }}>
+        <span style={{ fontFamily: SERIF, fontSize: 18, color: s.ink }}>Tuning</span>
+        <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: s.muted, fontSize: 18, cursor: 'pointer', lineHeight: 1 }}>✕</button>
+      </div>
+      {tunings.map((t) => {
+        const active = t === current;
+        return (
+          <button key={t} onClick={() => { onSelect(t); onClose(); }} style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%',
+            background: active ? (s.tone === 'paper' ? 'rgba(155,50,33,0.10)' : 'rgba(202,160,82,0.14)') : 'transparent',
+            border: 'none', borderRadius: 8, padding: '13px 12px', cursor: 'pointer', marginBottom: 2,
+          }}>
+            <span style={{ fontFamily: SERIF, fontSize: 16, color: active ? s.accent : s.ink }}>{t}</span>
+            {active && <span style={{ color: s.accent, fontSize: 11 }}>●</span>}
+          </button>
+        );
+      })}
+    </div>
+  </div>
+);
+
 const CabinetTuner: React.FC<CabinetTunerProps> = (p) => {
   const s = SKIN[p.cabinet];
+  const [tuningOpen, setTuningOpen] = React.useState(false);
   return (
     <div style={{
       minHeight: '100dvh', width: '100%', background: s.pageBg,
@@ -215,11 +250,17 @@ const CabinetTuner: React.FC<CabinetTunerProps> = (p) => {
         <TunerGauge noteData={p.noteData} cabinet={p.cabinet} />
         <StringRow tuning={p.tuning} manualStringIndex={p.manualStringIndex} detectedNote={p.noteData?.note ?? null} onPick={p.onPickString} s={s} />
         <Toolbar
-          tuningName={p.tuningName} onCycleTuning={p.onCycleTuning}
+          tuningName={p.tuningName} onOpenTuning={() => setTuningOpen(true)}
           isListening={p.isListening} isToggling={p.isToggling}
           isTuneByEar={p.isTuneByEar} onToggleEar={p.onToggleEar} onToggleListen={p.onToggleListen} s={s}
         />
       </div>
+      {tuningOpen && (
+        <TuningSheet
+          tunings={p.tuningKeys} current={p.tuningName}
+          onSelect={p.onSelectTuning} onClose={() => setTuningOpen(false)} s={s}
+        />
+      )}
     </div>
   );
 };
