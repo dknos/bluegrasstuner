@@ -323,18 +323,6 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-950 text-white font-sans flex flex-col overflow-x-hidden transition-colors duration-300" onClick={() => setActiveDropdown(null)}>
       
-      {/* GLOBAL CLOSE BUTTON FOR TOOLS */}
-      {isToolOpen && (
-          <button 
-            id="global-close-x"
-            onClick={closeAllTools}
-            aria-label="Close Tool"
-          >
-              <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"></path>
-              </svg>
-          </button>
-      )}
 
       {/* SYNTH HUB */}
       {showSynthsHub && (

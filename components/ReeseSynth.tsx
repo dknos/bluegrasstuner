@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
+import { SynthShell, Scope, Knob, KnobRow, EngageBar, NoteRow, Engrave } from './synthkit';
 
 interface ReeseSynthProps {
   onClose: () => void;
@@ -122,174 +123,47 @@ class ReeseEngine {
 
 const ReeseSynth: React.FC<ReeseSynthProps> = ({ onClose }) => {
     const engine = useRef<ReeseEngine | null>(null);
-    
+
     // Params
     const [cutoff, setCutoff] = useState(800);
     const [distortion, setDistortion] = useState(50);
     const [spread, setSpread] = useState(1);
     const [isPlaying, setIsPlaying] = useState(false);
-    
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const [isHold, setIsHold] = useState(false);
-    
-    // Canvas for Visualizer
-    const canvasRef = useRef<HTMLCanvasElement>(null);
-    const rafRef = useRef<number | null>(null);
+    const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
+    const [activeNote, setActiveNote] = useState<number | null>(null);
 
     useEffect(() => {
-        engine.current = new ReeseEngine();
-        
-        // Init visualizer
-        const draw = (_time?: number) => {
-            if (!canvasRef.current || !engine.current) return;
-            const ctx = canvasRef.current.getContext('2d');
-            if (!ctx) return;
-            
-            const w = canvasRef.current.width;
-            const h = canvasRef.current.height;
-            const bufferLen = engine.current.analyser.frequencyBinCount;
-            const data = new Uint8Array(bufferLen);
-            engine.current.analyser.getByteTimeDomainData(data); // Waveform
-
-            ctx.fillStyle = '#0f0716'; // Deep purple black
-            ctx.fillRect(0, 0, w, h);
-            
-            ctx.lineWidth = 3;
-            ctx.strokeStyle = '#a855f7'; // Purple 500
-            ctx.beginPath();
-            
-            const sliceWidth = w * 1.0 / bufferLen;
-            let x = 0;
-            
-            for (let i = 0; i < bufferLen; i++) {
-                const v = data[i] / 128.0;
-                const y = v * h / 2;
-                if (i === 0) ctx.moveTo(x, y);
-                else ctx.lineTo(x, y);
-                x += sliceWidth;
-            }
-            ctx.stroke();
-            rafRef.current = requestAnimationFrame(draw);
-        };
-        draw();
-
-        return () => {
-            if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
-            engine.current?.ctx.close();
-        };
+        const eng = new ReeseEngine();
+        engine.current = eng;
+        setAnalyser(eng.analyser);
+        return () => { eng.ctx.close(); };
     }, []);
 
-    // Parameter Updates
-    useEffect(() => {
-        engine.current?.setCutoff(cutoff);
-    }, [cutoff]);
+    useEffect(() => { engine.current?.setCutoff(cutoff); }, [cutoff]);
+    useEffect(() => { engine.current?.setDistortion(distortion); }, [distortion]);
+    useEffect(() => { engine.current?.setDetuneSpread(spread); }, [spread]);
 
-    useEffect(() => {
-        engine.current?.setDistortion(distortion);
-    }, [distortion]);
-
-    useEffect(() => {
-        engine.current?.setDetuneSpread(spread);
-    }, [spread]);
-
-    // Handle Pad Play
-    const handlePadDown = () => {
-        setIsPlaying(true);
-        engine.current?.trigger(true);
-    };
-    const handlePadUp = () => {
-        if(!isHold) {
-            setIsPlaying(false);
-            engine.current?.trigger(false);
-        }
-    };
+    const handlePadDown = () => { setIsPlaying(true); engine.current?.trigger(true); };
+    const handlePadUp = () => { setIsPlaying(false); engine.current?.trigger(false); };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 animate-fade-in font-mono select-none">
-            <div className="relative w-full max-w-xl bg-[#150a20] rounded-xl shadow-[0_0_50px_rgba(168,85,247,0.3)] overflow-hidden border-2 border-purple-900 flex flex-col">
-                
-                {/* Header */}
-                <div className="p-4 border-b border-purple-900/50 flex justify-between items-center bg-[#1e0e2e]">
-                    <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-purple-600 rounded flex items-center justify-center font-black text-xl">R</div>
-                        <h1 className="text-xl font-bold text-purple-100 uppercase tracking-widest">Reese Bass</h1>
-                    </div>
-                    <button onClick={onClose} className="text-purple-400 hover:text-white font-bold text-xl">✕</button>
-                </div>
-
-                {/* Visualizer */}
-                <div className="h-40 w-full relative">
-                    <canvas ref={canvasRef} width={600} height={200} className="w-full h-full" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#150a20] to-transparent opacity-50"></div>
-                </div>
-
-                {/* Controls */}
-                <div className="flex-1 p-6 flex flex-col gap-8">
-                    
-                    {/* XY-ish Sliders */}
-                    <div className="grid grid-cols-3 gap-4">
-                        <div className="flex flex-col items-center gap-2">
-                            <span className="text-xs font-bold text-purple-400">CUTOFF</span>
-                            <input 
-                                type="range" min="50" max="5000" value={cutoff} 
-                                onChange={(e) => setCutoff(parseFloat(e.target.value))}
-                                className="h-32 w-2 appearance-none bg-purple-900 rounded outline-none slider-vertical accent-purple-500"
-                                style={{ writingMode: 'vertical-lr' } as any}
-                            />
-                        </div>
-                        <div className="flex flex-col items-center gap-2">
-                            <span className="text-xs font-bold text-purple-400">DIRT</span>
-                            <input 
-                                type="range" min="0" max="400" value={distortion} 
-                                onChange={(e) => setDistortion(parseFloat(e.target.value))}
-                                className="h-32 w-2 appearance-none bg-purple-900 rounded outline-none slider-vertical accent-red-500"
-                                style={{ writingMode: 'vertical-lr' } as any}
-                            />
-                        </div>
-                        <div className="flex flex-col items-center gap-2">
-                            <span className="text-xs font-bold text-purple-400">WIDTH</span>
-                            <input 
-                                type="range" min="0" max="3" step="0.1" value={spread} 
-                                onChange={(e) => setSpread(parseFloat(e.target.value))}
-                                className="h-32 w-2 appearance-none bg-purple-900 rounded outline-none slider-vertical accent-blue-500"
-                                style={{ writingMode: 'vertical-lr' } as any}
-                            />
-                        </div>
-                    </div>
-
-                    {/* Trigger Pad */}
-                    <button
-                        onMouseDown={handlePadDown}
-                        onMouseUp={handlePadUp}
-                        onMouseLeave={handlePadUp}
-                        onTouchStart={(e) => { e.preventDefault(); handlePadDown(); }}
-                        onTouchEnd={(e) => { e.preventDefault(); handlePadUp(); }}
-                        className={`w-full h-24 rounded-xl border-4 font-black text-2xl tracking-widest transition-all
-                            ${isPlaying 
-                                ? 'bg-purple-600 border-purple-400 text-white shadow-[0_0_30px_#a855f7] scale-95' 
-                                : 'bg-[#2a1b3d] border-purple-900 text-purple-700 hover:bg-[#36234d] hover:text-purple-500'
-                            }
-                        `}
-                    >
-                        BASS DROP
-                    </button>
-
-                    {/* Note Selector (Simple) */}
-                    <div className="flex justify-center gap-2">
-                        {[36, 38, 40, 41, 43, 45, 47, 48].map(note => (
-                            <button 
-                                key={note}
-                                onClick={() => engine.current?.setNote(note)}
-                                className="w-8 h-8 rounded bg-purple-900/50 border border-purple-700 text-xs font-bold text-purple-300 hover:bg-purple-600 hover:text-white"
-                            >
-                                {note}
-                            </button>
-                        ))}
-                    </div>
-
-                </div>
+        <SynthShell name="Reese Bass" tag="Neuro · Supersaw · Bass Engine" onClose={onClose} accent="#caa052">
+            <Scope analyser={analyser} />
+            <KnobRow>
+                <Knob label="Cutoff" value={cutoff} min={50} max={5000} log onChange={setCutoff} format={(v) => `${Math.round(v)} Hz`} />
+                <Knob label="Dirt" value={distortion} min={0} max={400} onChange={setDistortion} format={(v) => Math.round(v).toString()} />
+                <Knob label="Width" value={spread} min={0} max={3} step={0.1} onChange={setSpread} format={(v) => `${v.toFixed(1)}×`} />
+            </KnobRow>
+            <EngageBar label="Bass Drop" active={isPlaying} onDown={handlePadDown} onUp={handlePadUp} accent="#caa052" />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <Engrave>Pitch</Engrave>
+                <NoteRow
+                    notes={[36, 38, 40, 41, 43, 45, 47, 48]}
+                    active={activeNote}
+                    onNote={(m) => { setActiveNote(m); engine.current?.setNote(m); }}
+                />
             </div>
-        </div>
+        </SynthShell>
     );
 };
 
