@@ -78,5 +78,6 @@ export const getChordData = (chordName: string) => {
     const altOpen = GUITAR_TUNING_E2[shape.altStr];
     const altFreq = altOpen * Math.pow(2, (aFret === -1 ? 0 : aFret) / 12);
 
-    return { freqs, rootFreq, altFreq };
+    // frets/name exposed for chord-diagram rendering (callers reading freqs/root/alt are unaffected)
+    return { freqs, rootFreq, altFreq, frets: shape.frets, name: baseName };
 };

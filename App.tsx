@@ -427,7 +427,7 @@ const App: React.FC = () => {
                   <>
                       <DropdownItem onClick={() => openModal(setShowSynthsHub)} label="Synths Hub (8 Engines)" />
                       <div className="h-px bg-gray-800 my-1"></div>
-                      <DropdownItem onClick={() => openModal(setShowJamSimulator)} label="Open Jam Simulator 🎻" />
+                      <DropdownItem onClick={() => openModal(setShowJamSimulator)} label="Open Jam" />
                       <DropdownItem onClick={() => openModal(setShowTabScroller)} label="Guitar Tab Auto-Scroller" />
                       <DropdownItem onClick={() => openModal(setShowDrumMachine)} label="Drum Machine + Keys" />
                       <DropdownItem onClick={() => openModal(setShowChordGame)} label="Chord Quiz" />
