@@ -4,6 +4,7 @@ import { NoteData, TuningDefinition } from './types';
 import { getTargetNote, INSTRUMENT_DATA, playTone } from './services/audioUtils';
 import FrequencyVisualizer from './components/FrequencyVisualizer';
 import TunerGauge, { Cabinet, CABINETS } from './components/TunerGauge';
+import CabinetTuner from './components/CabinetTuner';
 import InstrumentGraphic from './components/InstrumentGraphic';
 import GuessThatChordGame from './components/GuessThatChordGame';
 import CircleOfFifthsGame from './components/CircleOfFifthsGame';
@@ -226,9 +227,7 @@ const App: React.FC = () => {
 
   // Pitch Detection Loop
   useEffect(() => {
-    if (!analyser || !isListening || !audioContext) return;
-
-    const dbBuffer = new Uint8Array(analyser.frequencyBinCount);
+    if (!isListening) return;
 
     const updatePitch = () => {
       // Pitch comes from the WASM worklet (off-thread); read its latest result.
@@ -237,24 +236,9 @@ const App: React.FC = () => {
       if (fundamentalFreq !== -1) {
         const noteData = getTargetNote(fundamentalFreq, currentTuning, manualStringIndex);
         setCurrentNote(noteData);
-      }
-      
-      // DB Meter Logic (Direct DOM update for perf)
-      analyser.getByteFrequencyData(dbBuffer);
-      let sum = 0;
-      for (let i = 0; i < dbBuffer.length; i++) sum += dbBuffer[i];
-      const average = sum / dbBuffer.length;
-      // Approximate dB from byte data (0-255) to roughly -60 to 0 dB range
-      const db = (average / 255) * 60 - 60; 
-      
-      if (dbRef.current) {
-          const displayDb = db < -59 ? "- Inf" : `${db.toFixed(1)} dB`;
-          dbRef.current.innerText = displayDb;
-          
-          // Color coding
-          if (db > -10) dbRef.current.className = "text-red-500 font-mono font-bold text-xl";
-          else if (db > -25) dbRef.current.className = "text-green-400 font-mono font-bold text-xl";
-          else dbRef.current.className = "text-gray-500 font-mono font-bold text-xl";
+      } else {
+        // No pitch: go to listening state, but don't churn renders while silent.
+        setCurrentNote(prev => (prev === null ? prev : null));
       }
 
       rafRef.current = requestAnimationFrame(updatePitch);
@@ -265,7 +249,7 @@ const App: React.FC = () => {
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [analyser, isListening, audioContext, currentTuning, manualStringIndex]);
+  }, [isListening, currentTuning, manualStringIndex]);
 
   const handlePegClick = (stringNum: number, freq: number) => {
       if (isTuneByEar) {
@@ -277,6 +261,13 @@ const App: React.FC = () => {
               setManualStringIndex(stringNum);
           }
       }
+  };
+
+  const cycleTuning = () => {
+      const keys = Object.keys(availableTunings);
+      if (keys.length < 2) return;
+      const idx = keys.indexOf(tuningName);
+      setTuningName(keys[(idx + 1) % keys.length]);
   };
 
   const toggleDropdown = (e: React.MouseEvent<HTMLButtonElement>, type: string) => {
@@ -337,7 +328,7 @@ const App: React.FC = () => {
   );
 
   return (
-    <div className="h-screen max-h-screen bg-gray-950 text-white font-sans flex flex-col overflow-hidden transition-colors duration-300" onClick={() => setActiveDropdown(null)}>
+    <div className="min-h-screen bg-gray-950 text-white font-sans flex flex-col overflow-x-hidden transition-colors duration-300" onClick={() => setActiveDropdown(null)}>
       
       {/* GLOBAL CLOSE BUTTON FOR TOOLS */}
       {isToolOpen && (
@@ -519,150 +510,32 @@ const App: React.FC = () => {
           </div>
       )}
 
-      {/* --- TOP BAR --- */}
-      <header className="flex-none flex items-center justify-between px-3 py-3 bg-gray-900 border-b border-gray-800 z-50 relative shadow-md">
-        <div className="flex items-center gap-2 overflow-hidden">
-            <h1 className="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-neon-blue to-purple-500 tracking-tighter whitespace-nowrap">
-                BLUEGRASS TUNER
-            </h1>
-        </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
-             
-             {deferredPrompt && (
-                 <button
-                    onClick={handleInstallClick}
-                    className="h-9 px-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-lg animate-pulse transition-colors"
-                 >
-                    INSTALL APP
-                 </button>
-             )}
+      {/* --- VINTAGE CABINET TUNER (mobile-first) --- */}
+      <CabinetTuner
+        cabinet={currentCabinet}
+        instruments={Object.keys(INSTRUMENT_DATA)}
+        instrument={instrument}
+        tuningKeys={Object.keys(availableTunings)}
+        tuningName={tuningName}
+        tuning={currentTuning}
+        noteData={currentNote}
+        manualStringIndex={manualStringIndex}
+        isListening={isListening}
+        isToggling={isToggling}
+        isTuneByEar={isTuneByEar}
+        deferredPrompt={deferredPrompt}
+        onInstrument={setInstrument}
+        onCycleTuning={cycleTuning}
+        onPickString={handlePegClick}
+        onToggleListen={() => (isListening ? stopListening() : startListening())}
+        onToggleEar={() => setIsTuneByEar(!isTuneByEar)}
+        onInstall={handleInstallClick}
+        onOpenMenu={(type, e) => toggleDropdown(e, type)}
+        onOpenCabinets={() => setShowSkinSelector(true)}
+      />
 
-             <button
-                onClick={(e) => { e.stopPropagation(); setIsTuneByEar(!isTuneByEar); }}
-                className={`h-9 px-3 rounded-lg border font-bold text-[10px] uppercase tracking-wider flex items-center justify-center transition-all ${
-                    isTuneByEar 
-                    ? 'bg-purple-900/50 border-purple-500 text-purple-200' 
-                    : 'bg-gray-800 border-gray-700 text-gray-400 hover:text-white'
-                }`}
-             >
-                {isTuneByEar ? 'EAR MODE' : 'TUNER'}
-             </button>
-
-             <button
-                onClick={(e) => { e.stopPropagation(); isListening ? stopListening() : startListening(); }}
-                disabled={isToggling}
-                className={`h-9 px-3 md:px-4 rounded-full font-bold text-xs flex items-center justify-center transition-all shadow-lg transform active:scale-95 whitespace-nowrap ${
-                    isListening 
-                    ? 'bg-red-500 hover:bg-red-600 text-white' 
-                    : 'bg-neon-green hover:bg-green-400 text-black animate-pulse-fast'
-                } ${isToggling ? 'opacity-50 cursor-wait' : ''}`}
-             >
-                {isToggling ? (
-                    <span className="animate-spin h-3 w-3 border-2 border-white border-t-transparent rounded-full"></span>
-                ) : (
-                    isListening ? <span className="mr-1">■</span> : <span className="mr-1">▶</span>
-                )}
-                <span className="hidden sm:inline">{isToggling ? 'WAIT' : (isListening ? 'STOP' : 'START')}</span>
-             </button>
-        </div>
-      </header>
-
-      {/* --- CONTROL BAR --- */}
-      <div className="flex-none bg-gray-950 border-b border-gray-800 z-40 shadow-sm relative">
-          <div className="grid grid-cols-[1.5fr_1.5fr_0.8fr_0.8fr] gap-2 px-2 py-2 items-center w-full">
-            <select 
-                value={instrument} 
-                onChange={(e) => setInstrument(e.target.value)}
-                onClick={(e) => e.stopPropagation()}
-                className="h-10 w-full bg-gray-800 text-white text-xs font-bold rounded border border-gray-700 focus:border-neon-blue outline-none px-2 cursor-pointer hover:bg-gray-700 transition-colors truncate appearance-none text-center"
-            >
-                {Object.keys(INSTRUMENT_DATA).map(inst => (
-                    <option key={inst} value={inst}>{inst}</option>
-                ))}
-            </select>
-
-            <select 
-                value={tuningName} 
-                onChange={(e) => setTuningName(e.target.value)}
-                onClick={(e) => e.stopPropagation()}
-                className="h-10 w-full bg-gray-800 text-white text-xs font-bold rounded border border-gray-700 focus:border-neon-blue outline-none px-2 cursor-pointer hover:bg-gray-700 transition-colors truncate appearance-none text-center"
-            >
-                {availableTunings && Object.keys(availableTunings).map(t => (
-                    <option key={t} value={t}>{t}</option>
-                ))}
-            </select>
-            
-            <ToolbarButton 
-                label="Charts" 
-                isOpen={activeDropdown?.type === 'charts'}
-                onClick={(e) => toggleDropdown(e, 'charts')}
-            />
-
-            <ToolbarButton 
-                label="Tools" 
-                isOpen={activeDropdown?.type === 'tools'}
-                onClick={(e) => toggleDropdown(e, 'tools')}
-            />
-          </div>
-      </div>
-
-      {/* --- MAIN CONTENT GRID --- */}
-      <div className="flex-1 min-h-0 flex flex-col md:flex-row z-0 relative">
-        
-        {/* LEFT COLUMN: Tuner + Stats */}
-        <div className="flex-none md:flex-1 bg-gray-950 relative border-b md:border-b-0 md:border-r border-gray-800 flex flex-col items-center p-4 transition-colors">
-             
-             {/* 1. TUNER GAUGE (Scaled down on mobile) */}
-             <div className="w-full flex justify-center mb-2 md:mb-6 mt-2">
-                 <div className="scale-60 md:scale-100 origin-center transition-transform">
-                    <TunerGauge noteData={currentNote} cabinet={currentCabinet} />
-                 </div>
-             </div>
-
-             {/* 2. dB METER (Always Visible) */}
-             <div className="flex flex-col items-center mb-4 md:mb-8">
-                 <div ref={dbRef} className="text-xl font-bold font-mono text-gray-500">- Inf</div>
-                 <div className="text-[10px] text-gray-600 uppercase tracking-widest font-bold">Volume</div>
-             </div>
-
-             {/* Reset Button */}
-             {manualStringIndex !== null && !isTuneByEar && (
-                 <button 
-                    onClick={(e) => { e.stopPropagation(); setManualStringIndex(null); }}
-                    className="px-3 py-1 bg-gray-800 rounded text-[10px] text-neon-blue hover:text-white font-bold uppercase tracking-wider border border-gray-700 hover:border-neon-blue transition-all"
-                 >
-                    Reset String Lock
-                 </button>
-            )}
-             
-             {/* Stats (Desktop mostly) */}
-             <div className="flex justify-between mt-auto px-4 text-xs font-mono text-gray-500 w-full hidden md:flex">
-                <div>DETECTED: <span className="text-white">{currentNote?.frequency ? currentNote.frequency.toFixed(1) : '--'} Hz</span></div>
-                <div>TARGET: <span className="text-white">{currentNote?.perfectFrequency ? currentNote.perfectFrequency.toFixed(1) : '--'} Hz</span></div>
-            </div>
-        </div>
-
-        {/* RIGHT COLUMN: Instrument + Desktop Visualizer */}
-        <div className="flex-1 flex flex-col relative min-h-0 md:h-auto">
-            {/* Instrument Graphic */}
-            <div className="flex-1 relative bg-gray-900 overflow-hidden transition-colors border-t md:border-t-0 border-gray-800">
-                <InstrumentGraphic 
-                    instrumentName={instrument} 
-                    tuning={currentTuning} 
-                    currentNote={currentNote?.note} 
-                    manualStringIndex={manualStringIndex}
-                    onPegClick={handlePegClick}
-                    isTuneByEar={isTuneByEar}
-                />
-            </div>
-
-            {/* DESKTOP ONLY: Visualizer */}
-            <div className="hidden md:block h-32 bg-black border-t border-gray-800 relative transition-colors">
-                <div className="absolute top-1 left-2 text-[10px] text-gray-500 font-bold z-10">SPECTRUM</div>
-                <FrequencyVisualizer analyser={analyser} className="w-full h-full opacity-80" />
-            </div>
-        </div>
-      </div>
+      {/* Hidden dB meter sink — the audio loop writes here; kept off the cabinet UI */}
+      <div ref={dbRef} className="hidden" />
       
       {/* DROPDOWNS */}
       {activeDropdown && (
