@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
+import { SynthShell, Scope, Knob, KnobRow, Keys, Rocker, Engrave, PANEL } from './synthkit';
 
 interface OPL3SynthProps {
   onClose: () => void;
@@ -356,6 +357,7 @@ const OPL3Synth: React.FC<OPL3SynthProps> = ({ onClose }) => {
     const [activeNotes, setActiveNotes] = useState<number[]>([]);
     const [system, setSystem] = useState('SB16');
     const [presetName, setPresetName] = useState(OPL_PRESETS[0].name);
+    const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
     
     // Editor State
     const [showEditor, setShowEditor] = useState(false);
@@ -370,7 +372,8 @@ const OPL3Synth: React.FC<OPL3SynthProps> = ({ onClose }) => {
 
     useEffect(() => {
         engine.current = new OPLEngine();
-        
+        setAnalyser(engine.current.analyser);
+
         // Visualizer Loop
         const draw = (_time?: number) => {
             if (!canvasRef.current || !engine.current) return;
@@ -475,140 +478,65 @@ const OPL3Synth: React.FC<OPL3SynthProps> = ({ onClose }) => {
         engine.current?.noteOff(n);
     };
 
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 p-0 md:p-4 animate-fade-in font-mono select-none touch-none">
-            <div className="relative w-full max-w-5xl h-full md:h-auto bg-[#050505] rounded-xl overflow-hidden border-[8px] border-[#222] shadow-2xl flex flex-col pt-14 md:pt-0">
-                
-                {/* CRT FX */}
-                <div className="absolute inset-0 pointer-events-none z-[60] crt-scanline opacity-10"></div>
-                
-                {/* HEADER */}
-                <div className="flex-none bg-[#0a0a0a] border-b border-[#004400] p-4 flex justify-between items-center z-50 pl-16">
-                    <div>
-                        <h1 className="text-xl md:text-2xl font-bold text-[#00ff00] uppercase tracking-widest text-phosphor">AdLib OPL3</h1>
-                        <span className="text-[10px] text-[#008800] uppercase">YM3812 Emulator | 49716 Hz</span>
-                    </div>
-                    <div className="flex gap-2">
-                        {['AdLib', 'SB16', 'Genesis', 'Tandy'].map(sys => (
-                            <button 
-                                key={sys} 
-                                onClick={() => { setSystem(sys); engine.current?.setSystem(sys); }}
-                                className={`px-2 py-1 border border-[#00ff00] text-[9px] uppercase font-bold ${system === sys ? 'bg-[#00ff00] text-black' : 'bg-black text-[#00ff00]'}`}
-                            >
-                                {sys}
-                            </button>
-                        ))}
-                        <div className="w-px h-6 bg-[#004400] mx-1"></div>
-                        <button onClick={() => setShowEditor(!showEditor)} className="px-3 py-1 border border-[#00ff00] text-[9px] uppercase font-bold bg-[#002200] text-[#00ff00] hover:bg-[#003300]">
-                            {showEditor ? 'HIDE PROG' : 'EDIT PROG'}
-                        </button>
-                    </div>
-                </div>
+    const tabBtn = (on: boolean, label: string, fn: () => void) => (
+        <button onClick={fn} style={{ flex: 1, padding: '8px 0', borderRadius: 7, cursor: 'pointer', fontFamily: '"JetBrains Mono", monospace', fontSize: 10, letterSpacing: 1, textTransform: 'uppercase', border: `1px solid ${on ? PANEL.brass : PANEL.line}`, background: on ? PANEL.brass : '#181410', color: on ? '#1a0d04' : PANEL.inkMute }}>{label}</button>
+    );
 
-                {/* MAIN BODY */}
-                <div className="flex-1 bg-[#000500] flex flex-col md:flex-row overflow-hidden relative">
-                    
-                    {/* LEFT: BANK */}
-                    <div className="flex-none w-full md:w-48 border-r border-[#004400] flex flex-col">
-                        <div className="text-[#00ff00] text-[10px] font-bold p-2 border-b border-[#004400]">PRESETS .INS</div>
-                        <div className="flex-1 overflow-y-auto p-1">
-                            {OPL_PRESETS.map((p, i) => (
-                                <button 
-                                    key={i} 
-                                    onClick={() => loadPreset(p)}
-                                    className={`w-full text-left px-2 py-1.5 text-[10px] font-mono uppercase truncate mb-1 border border-transparent hover:border-[#004400] ${presetName === p.name ? 'bg-[#00ff00] text-black' : 'text-[#00aa00]'}`}
-                                >
-                                    {p.name}
-                                </button>
+    return (
+        <SynthShell name="AdLib OPL3" tag="YM3812 · 2-Op FM Emulator" onClose={onClose} accent={PANEL.phosphor}>
+            <Scope analyser={analyser} mode="bars" height={80} color={PANEL.phosphor} />
+            <Rocker label="Chip" options={['AdLib', 'SB16', 'Genesis', 'Tandy']} value={['AdLib', 'SB16', 'Genesis', 'Tandy'].indexOf(system)} onChange={(i) => { const s = ['AdLib', 'SB16', 'Genesis', 'Tandy'][i]; setSystem(s); engine.current?.setSystem(s); }} />
+
+            <Engrave>Patch · .INS</Engrave>
+            <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 4 }}>
+                {OPL_PRESETS.map((pr, i) => (
+                    <button key={i} onClick={() => loadPreset(pr)} style={{ flex: '0 0 auto', padding: '8px 12px', borderRadius: 7, cursor: 'pointer', fontFamily: '"JetBrains Mono", monospace', fontSize: 10, letterSpacing: 0.5, textTransform: 'uppercase', whiteSpace: 'nowrap', border: `1px solid ${presetName === pr.name ? PANEL.brass : PANEL.line}`, background: presetName === pr.name ? PANEL.brass : '#181410', color: presetName === pr.name ? '#1a0d04' : PANEL.inkMute }}>{pr.name}</button>
+                ))}
+            </div>
+
+            <div style={{ display: 'flex', gap: 6 }}>
+                {tabBtn(showEditor, 'Operators', () => setShowEditor(true))}
+                {tabBtn(!showEditor, 'Sequencer', () => setShowEditor(false))}
+            </div>
+
+            {showEditor ? (
+                <>
+                    <Rocker options={['Op 1 · Mod', 'Op 2 · Car']} value={editOp} onChange={(i) => { setEditOp(i); setOpParams(engine.current?.currentPreset.ops[i]); }} />
+                    <KnobRow>
+                        <Knob label="Mult" value={opParams.mult} min={0} max={15} step={0.5} onChange={(v) => handleOpChange('mult', v)} size={50} />
+                        <Knob label="Level" value={opParams.tl} min={0} max={63} step={1} onChange={(v) => handleOpChange('tl', v)} size={50} />
+                        <Knob label="Attack" value={opParams.att} min={0} max={15} step={1} onChange={(v) => handleOpChange('att', v)} size={50} />
+                        <Knob label="Decay" value={opParams.dec} min={0} max={15} step={1} onChange={(v) => handleOpChange('dec', v)} size={50} />
+                        <Knob label="Sustain" value={opParams.sus} min={0} max={15} step={1} onChange={(v) => handleOpChange('sus', v)} size={50} />
+                        <Knob label="Release" value={opParams.rel} min={0} max={15} step={1} onChange={(v) => handleOpChange('rel', v)} size={50} />
+                        <Knob label="Wave" value={opParams.wave} min={0} max={7} step={1} onChange={(v) => handleOpChange('wave', v)} size={50} />
+                        <Knob label="Feedbk" value={opParams.fb} min={0} max={7} step={1} onChange={(v) => handleOpChange('fb', v)} size={50} />
+                    </KnobRow>
+                </>
+            ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                            {[-2, -1, 0, 1, 2, 3, 4].map((oct) => (
+                                <button key={oct} onClick={() => setSeqOctave(oct)} style={{ padding: '5px 8px', borderRadius: 6, cursor: 'pointer', fontFamily: '"JetBrains Mono", monospace', fontSize: 9, border: `1px solid ${seqOctave === oct ? PANEL.brass : PANEL.line}`, background: seqOctave === oct ? PANEL.brass : '#181410', color: seqOctave === oct ? '#1a0d04' : PANEL.inkMute }}>{oct > 0 ? `+${oct}` : oct}</button>
                             ))}
                         </div>
+                        <button onClick={() => setIsPlaying(!isPlaying)} style={{ padding: '7px 16px', borderRadius: 999, cursor: 'pointer', fontFamily: '"DM Serif Display", serif', fontSize: 14, letterSpacing: 1, border: 'none', background: isPlaying ? '#7a1d10' : PANEL.brass, color: isPlaying ? '#f0d57f' : '#1a0d04' }}>{isPlaying ? '■' : '▶'}</button>
                     </div>
-
-                    {/* CENTER: SCREEN / EDITOR */}
-                    <div className="flex-1 flex flex-col p-4 relative overflow-y-auto">
-                        
-                        {/* VISUALIZER SCREEN */}
-                        <div className="h-32 w-full bg-black border-4 border-[#003300] rounded mb-4 relative shadow-[inset_0_0_20px_rgba(0,50,0,0.5)] overflow-hidden flex-shrink-0">
-                            <canvas ref={canvasRef} width={600} height={200} className="w-full h-full opacity-90" />
-                            <div className="absolute top-2 left-2 text-[#00ff00] text-[10px]">Active Voice: {activeNotes.length}</div>
-                            
-                            {/* Sequencer Overlay */}
-                            <div className="absolute bottom-0 left-0 right-0 h-4 flex">
-                                {sequence.map((n, i) => (
-                                    <div key={i} className={`flex-1 border-r border-[#002200] ${i === seqStep ? 'bg-[#00ff00]' : (n !== null ? 'bg-[#005500]' : 'bg-transparent')}`}></div>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* EDITOR PANEL */}
-                        {showEditor ? (
-                            <div className="flex-1 bg-[#001100] border border-[#004400] p-2 rounded flex flex-col">
-                                <div className="flex justify-between items-center mb-2 border-b border-[#003300] pb-1">
-                                    <div className="flex gap-2">
-                                        <button onClick={() => { setEditOp(0); setOpParams(engine.current?.currentPreset.ops[0]); }} className={`text-[9px] font-bold px-2 ${editOp === 0 ? 'bg-[#00ff00] text-black' : 'text-[#00ff00] border border-[#00ff00]'}`}>OP 1 (MOD)</button>
-                                        <button onClick={() => { setEditOp(1); setOpParams(engine.current?.currentPreset.ops[1]); }} className={`text-[9px] font-bold px-2 ${editOp === 1 ? 'bg-[#00ff00] text-black' : 'text-[#00ff00] border border-[#00ff00]'}`}>OP 2 (CAR)</button>
-                                    </div>
-                                    <div className="text-[9px] text-[#008800]">ALG: {engine.current?.currentPreset.alg}</div>
-                                </div>
-                                
-                                <div className="flex-1 flex justify-around items-end pb-2">
-                                    <DOSSlider label="MULT" value={opParams.mult} min={0} max={15} step={0.5} onChange={(v) => handleOpChange('mult', v)} />
-                                    <DOSSlider label="TL (VOL)" value={opParams.tl} min={0} max={63} onChange={(v) => handleOpChange('tl', v)} />
-                                    <DOSSlider label="ATT" value={opParams.att} min={0} max={15} onChange={(v) => handleOpChange('att', v)} />
-                                    <DOSSlider label="DEC" value={opParams.dec} min={0} max={15} onChange={(v) => handleOpChange('dec', v)} />
-                                    <DOSSlider label="SUS" value={opParams.sus} min={0} max={15} onChange={(v) => handleOpChange('sus', v)} />
-                                    <DOSSlider label="REL" value={opParams.rel} min={0} max={15} onChange={(v) => handleOpChange('rel', v)} />
-                                    <DOSSlider label="WAVE" value={opParams.wave} min={0} max={7} onChange={(v) => handleOpChange('wave', v)} />
-                                    <DOSSlider label="FB" value={opParams.fb} min={0} max={7} onChange={(v) => handleOpChange('fb', v)} />
-                                </div>
-                            </div>
-                        ) : (
-                            // SEQUENCER VIEW
-                            <div className="flex-1 flex flex-col gap-2">
-                                <div className="flex justify-between items-center">
-                                    <h3 className="text-[#00ff00] text-[10px] font-bold">SEQUENCER (16 STEP)</h3>
-                                    <button onClick={() => setIsPlaying(!isPlaying)} className={`text-[9px] font-bold px-4 py-1 border border-[#00ff00] ${isPlaying ? 'bg-[#00ff00] text-black' : 'text-[#00ff00]'}`}>
-                                        {isPlaying ? 'STOP' : 'PLAY'}
-                                    </button>
-                                </div>
-                                
-                                {/* Octave Selector Bar */}
-                                <div className="flex justify-center gap-1 my-1">
-                                    {[-2, -1, 0, 1, 2, 3, 4].map(oct => (
-                                        <button 
-                                            key={oct}
-                                            onClick={() => setSeqOctave(oct)}
-                                            className={`px-2 py-0.5 text-[9px] border font-bold ${seqOctave === oct ? 'bg-[#00ff00] text-black border-[#00ff00] shadow-[0_0_5px_#00ff00]' : 'bg-[#001100] text-[#008800] border-[#004400] hover:border-[#00aa00]'}`}
-                                        >
-                                            {oct > 0 ? `+${oct}` : oct}
-                                        </button>
-                                    ))}
-                                    <div className="ml-2 text-[9px] text-[#00ff00] font-bold self-center">OCT: {seqOctave > 0 ? `+${seqOctave}` : seqOctave}</div>
-                                </div>
-
-                                <div className="flex-1 grid grid-cols-8 gap-1">
-                                    {sequence.map((n, i) => (
-                                        <button 
-                                            key={i}
-                                            onClick={() => toggleSeqNote(i)}
-                                            className={`border border-[#003300] flex items-center justify-center text-[9px] font-bold hover:border-[#00ff00] transition-colors ${n !== null ? 'bg-[#005500] text-white shadow-[0_0_5px_#00ff00]' : 'bg-black text-[#003300]'} ${i === seqStep ? 'border-white border-2' : ''}`}
-                                        >
-                                            {n !== null ? getNoteName(n) : i+1}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: 4 }}>
+                        {sequence.map((n, i) => (
+                            <button key={i} onClick={() => toggleSeqNote(i)} style={{ aspectRatio: '1', borderRadius: 6, cursor: 'pointer', fontFamily: '"JetBrains Mono", monospace', fontSize: 9,
+                                border: `1px solid ${i === seqStep ? PANEL.phosphor : PANEL.line}`,
+                                background: n !== null ? 'rgba(202,160,82,0.25)' : '#100c08', color: n !== null ? PANEL.ink : PANEL.inkMute,
+                                boxShadow: i === seqStep ? `0 0 8px ${PANEL.phosphor}66` : 'none' }}>{n !== null ? getNoteName(n) : i + 1}</button>
+                        ))}
                     </div>
                 </div>
+            )}
 
-                {/* FOOTER: KEYBOARD */}
-                <div className="flex-none h-28 md:h-32 z-40 relative">
-                    <Keyboard activeNotes={activeNotes} onNoteOn={handleNoteOn} onNoteOff={handleNoteOff} />
-                </div>
-
-            </div>
-        </div>
+            <Engrave>Keyboard · {activeNotes.length} voice</Engrave>
+            <Keys octaves={2} startMidi={48} activeNotes={activeNotes} onNoteOn={handleNoteOn} onNoteOff={handleNoteOff} />
+        </SynthShell>
     );
 };
 

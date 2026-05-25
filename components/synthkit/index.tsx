@@ -294,6 +294,39 @@ export const EngageBar: React.FC<{
     }}>{label}</button>
 );
 
+// ── TouchStrip ── wide horizontal performance pad; drag = sweep (wobble) ────
+export const TouchStrip: React.FC<{
+  label: string; value: number; min?: number; max?: number; onChange: (v: number) => void; height?: number; accent?: string; log?: boolean;
+}> = ({ label, value, min = 0, max = 1, onChange, height = 84, accent = PANEL.brass, log = false }) => {
+  const ref = useRef<HTMLDivElement>(null);
+  const toNorm = (v: number) => log ? Math.log(v / min) / Math.log(max / min) : (v - min) / (max - min);
+  const fromNorm = (n: number) => log ? min * Math.pow(max / min, n) : min + n * (max - min);
+  const norm = Math.max(0, Math.min(1, toNorm(value)));
+  const set = (clientX: number) => {
+    const el = ref.current; if (!el) return;
+    const r = el.getBoundingClientRect();
+    onChange(fromNorm(Math.max(0, Math.min(1, (clientX - r.left) / r.width))));
+  };
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+      <span style={{ fontFamily: MONO, fontSize: 8.5, color: PANEL.inkMute, letterSpacing: 2, textTransform: 'uppercase' }}>{label}</span>
+      <div ref={ref}
+        onPointerDown={(e) => { (e.target as Element).setPointerCapture?.(e.pointerId); set(e.clientX); }}
+        onPointerMove={(e) => { if (e.buttons) set(e.clientX); }}
+        style={{ position: 'relative', width: '100%', height, borderRadius: 10, cursor: 'ew-resize', touchAction: 'none', overflow: 'hidden',
+          background: 'linear-gradient(180deg,#0c0f0a,#070907)', boxShadow: `inset 0 2px 10px rgba(0,0,0,0.85), inset 0 0 0 1px ${PANEL.brassDark}` }}>
+        {/* fill to current x */}
+        <div style={{ position: 'absolute', inset: 0, width: `${norm * 100}%`, background: `linear-gradient(90deg, ${accent}22, ${accent}55)` }} />
+        {/* vertical hairlines */}
+        {[0.25, 0.5, 0.75].map((f) => <div key={f} style={{ position: 'absolute', top: 0, bottom: 0, left: `${f * 100}%`, width: 1, background: 'rgba(143,209,122,0.1)' }} />)}
+        {/* indicator */}
+        <div style={{ position: 'absolute', top: 4, bottom: 4, left: `calc(${norm * 100}% - 2px)`, width: 4, borderRadius: 2, background: accent, boxShadow: `0 0 10px ${accent}` }} />
+        <span style={{ position: 'absolute', right: 8, bottom: 6, fontFamily: MONO, fontSize: 8, color: PANEL.inkMute }}>◀ slide ▶</span>
+      </div>
+    </div>
+  );
+};
+
 // ── Note row (semitone buttons / mini keys) ─────────────────────────────────
 const NOTE_NAMES = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'];
 export const NoteRow: React.FC<{ notes: number[]; onNote: (m: number) => void; active?: number | null }> = ({ notes, onNote, active }) => (

@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { SynthShell, Scope, Knob, KnobRow, EngageBar, NoteRow, Engrave } from './synthkit';
+import { SynthShell, Scope, Knob, KnobRow, EngageBar, NoteRow, Engrave, TouchStrip, PANEL } from './synthkit';
 
 interface ReeseSynthProps {
   onClose: () => void;
@@ -154,6 +154,9 @@ const ReeseSynth: React.FC<ReeseSynthProps> = ({ onClose }) => {
                 <Knob label="Dirt" value={distortion} min={0} max={400} onChange={setDistortion} format={(v) => Math.round(v).toString()} />
                 <Knob label="Width" value={spread} min={0} max={3} step={0.1} onChange={setSpread} format={(v) => `${v.toFixed(1)}×`} />
             </KnobRow>
+            <Engrave>Wobble · slide to sweep the filter</Engrave>
+            <TouchStrip label="Wobble" value={cutoff} min={50} max={5000} log accent={PANEL.phosphor}
+                onChange={setCutoff} height={90} />
             <EngageBar label="Bass Drop" active={isPlaying} onDown={handlePadDown} onUp={handlePadUp} accent="#caa052" />
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <Engrave>Pitch</Engrave>

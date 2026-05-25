@@ -2,6 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Prevent tap-hold text selection / iOS copy-callout on controls (was eating
+   button taps — including synth close buttons — on touch devices). */
+button, [role="button"], .synth-ui {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+button { -webkit-tap-highlight-color: transparent; }
+
 body {
   background-color: var(--c-gray-950);
   color: var(--c-text-white);
