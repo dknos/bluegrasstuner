@@ -327,6 +327,45 @@ export const TouchStrip: React.FC<{
   );
 };
 
+// ── XY pad ── press-and-hold to engage, slide for 2-axis control ────────────
+export const XYPad: React.FC<{
+  x: number; y: number; onChange: (x: number, y: number) => void;
+  onDown?: () => void; onUp?: () => void;
+  labelX?: string; labelY?: string; height?: number; accent?: string; active?: boolean;
+}> = ({ x, y, onChange, onDown, onUp, labelX = 'X', labelY = 'Y', height = 190, accent = PANEL.phosphor, active = false }) => {
+  const ref = useRef<HTMLDivElement>(null);
+  const set = (clientX: number, clientY: number) => {
+    const el = ref.current; if (!el) return;
+    const r = el.getBoundingClientRect();
+    const nx = Math.max(0, Math.min(1, (clientX - r.left) / r.width));
+    const ny = Math.max(0, Math.min(1, 1 - (clientY - r.top) / r.height)); // up = 1
+    onChange(nx, ny);
+  };
+  return (
+    <div ref={ref}
+      onPointerDown={(e) => { (e.target as Element).setPointerCapture?.(e.pointerId); onDown?.(); set(e.clientX, e.clientY); }}
+      onPointerMove={(e) => { if (e.buttons) set(e.clientX, e.clientY); }}
+      onPointerUp={() => onUp?.()} onPointerCancel={() => onUp?.()} onPointerLeave={(e) => { if (e.buttons) onUp?.(); }}
+      style={{ position: 'relative', width: '100%', height, borderRadius: 12, cursor: 'crosshair', touchAction: 'none', overflow: 'hidden',
+        background: 'radial-gradient(120% 120% at 50% 0%, #0e120c, #070907)',
+        boxShadow: `inset 0 2px 14px rgba(0,0,0,0.85), inset 0 0 0 1px ${active ? accent : PANEL.brassDark}` }}>
+      {[0.25, 0.5, 0.75].map((f) => <div key={'v' + f} style={{ position: 'absolute', top: 0, bottom: 0, left: `${f * 100}%`, width: 1, background: 'rgba(143,209,122,0.08)' }} />)}
+      {[0.25, 0.5, 0.75].map((f) => <div key={'h' + f} style={{ position: 'absolute', left: 0, right: 0, top: `${f * 100}%`, height: 1, background: 'rgba(143,209,122,0.08)' }} />)}
+      {/* crosshair tracking the puck */}
+      <div style={{ position: 'absolute', top: 0, bottom: 0, left: `${x * 100}%`, width: 1, background: active ? `${accent}66` : 'rgba(143,209,122,0.12)' }} />
+      <div style={{ position: 'absolute', left: 0, right: 0, top: `${(1 - y) * 100}%`, height: 1, background: active ? `${accent}66` : 'rgba(143,209,122,0.12)' }} />
+      {/* puck */}
+      <div style={{ position: 'absolute', left: `${x * 100}%`, top: `${(1 - y) * 100}%`, width: active ? 28 : 20, height: active ? 28 : 20,
+        marginLeft: active ? -14 : -10, marginTop: active ? -14 : -10, borderRadius: 999, pointerEvents: 'none',
+        background: active ? accent : 'transparent', border: `2px solid ${accent}`,
+        boxShadow: active ? `0 0 24px ${accent}, 0 0 9px ${accent}` : 'none', transition: 'width .08s, height .08s, background .08s' }} />
+      <span style={{ position: 'absolute', left: 8, bottom: 6, fontFamily: MONO, fontSize: 8, color: PANEL.inkMute, letterSpacing: 1.5, textTransform: 'uppercase' }}>↔ {labelX}</span>
+      <span style={{ position: 'absolute', left: 8, top: 6, fontFamily: MONO, fontSize: 8, color: PANEL.inkMute, letterSpacing: 1.5, textTransform: 'uppercase' }}>↕ {labelY}</span>
+      <span style={{ position: 'absolute', right: 8, bottom: 6, fontFamily: MONO, fontSize: 8, color: active ? accent : PANEL.inkMute, letterSpacing: 1.5, textTransform: 'uppercase' }}>{active ? '● hold' : 'press + slide'}</span>
+    </div>
+  );
+};
+
 // ── Note row (semitone buttons / mini keys) ─────────────────────────────────
 const NOTE_NAMES = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'];
 export const NoteRow: React.FC<{ notes: number[]; onNote: (m: number) => void; active?: number | null }> = ({ notes, onNote, active }) => (

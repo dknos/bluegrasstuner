@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { SynthShell, Scope, Knob, KnobRow, EngageBar, NoteRow, Engrave, TouchStrip, PANEL } from './synthkit';
+import { SynthShell, Scope, Knob, KnobRow, XYPad, NoteRow, Engrave, PANEL } from './synthkit';
 
 interface ReeseSynthProps {
   onClose: () => void;
@@ -31,6 +31,10 @@ class ReeseEngine {
     filter: BiquadFilterNode;
     distortion: WaveShaperNode;
     compressor: DynamicsCompressorNode;
+
+    // Wobble LFO (modulates filter cutoff) — driven by the XY pad
+    lfo: OscillatorNode;
+    lfoDepth: GainNode;
 
     constructor() {
         this.ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -78,10 +82,28 @@ class ReeseEngine {
             gain.connect(this.distortion);
             
             osc.start();
-            
+
             this.oscs.push(osc);
             this.gains.push(gain);
         });
+
+        // Wobble LFO → depth gain → filter cutoff (additive modulation around base cutoff)
+        this.lfo = this.ctx.createOscillator();
+        this.lfo.type = 'sine';
+        this.lfo.frequency.value = 4;
+        this.lfoDepth = this.ctx.createGain();
+        this.lfoDepth.gain.value = 0;
+        this.lfo.connect(this.lfoDepth);
+        this.lfoDepth.connect(this.filter.frequency);
+        this.lfo.start();
+    }
+
+    setWobbleRate(hz: number) {
+        this.lfo.frequency.setTargetAtTime(hz, this.ctx.currentTime, 0.03);
+    }
+
+    setWobbleDepth(hz: number) {
+        this.lfoDepth.gain.setTargetAtTime(hz, this.ctx.currentTime, 0.03);
     }
 
     setCutoff(val: number) {
@@ -121,6 +143,11 @@ class ReeseEngine {
     }
 }
 
+// Wobble-pad X axis → LFO rate (Hz), logarithmic for musical feel
+const RATE_MIN = 0.3, RATE_MAX = 18;
+const rateHz = (x: number) => RATE_MIN * Math.pow(RATE_MAX / RATE_MIN, x);
+const DEPTH_MAX = 3000; // Hz of cutoff swing at full depth
+
 const ReeseSynth: React.FC<ReeseSynthProps> = ({ onClose }) => {
     const engine = useRef<ReeseEngine | null>(null);
 
@@ -128,23 +155,36 @@ const ReeseSynth: React.FC<ReeseSynthProps> = ({ onClose }) => {
     const [cutoff, setCutoff] = useState(800);
     const [distortion, setDistortion] = useState(50);
     const [spread, setSpread] = useState(1);
-    const [isPlaying, setIsPlaying] = useState(false);
     const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
     const [activeNote, setActiveNote] = useState<number | null>(null);
+
+    // Wobble XY pad + hold latch
+    const [padX, setPadX] = useState(0.35); // rate
+    const [padY, setPadY] = useState(0.5);  // depth
+    const [padDown, setPadDown] = useState(false);
+    const [latched, setLatched] = useState(false);
+    const playing = padDown || latched;
 
     useEffect(() => {
         const eng = new ReeseEngine();
         engine.current = eng;
         setAnalyser(eng.analyser);
+        eng.setWobbleRate(rateHz(0.35));
+        eng.setWobbleDepth(0.5 * DEPTH_MAX);
         return () => { eng.ctx.close(); };
     }, []);
 
     useEffect(() => { engine.current?.setCutoff(cutoff); }, [cutoff]);
     useEffect(() => { engine.current?.setDistortion(distortion); }, [distortion]);
     useEffect(() => { engine.current?.setDetuneSpread(spread); }, [spread]);
+    // single gate: sound is on while the pad is held OR the latch is engaged
+    useEffect(() => { engine.current?.trigger(playing); }, [playing]);
 
-    const handlePadDown = () => { setIsPlaying(true); engine.current?.trigger(true); };
-    const handlePadUp = () => { setIsPlaying(false); engine.current?.trigger(false); };
+    const onPad = (x: number, y: number) => {
+        setPadX(x); setPadY(y);
+        engine.current?.setWobbleRate(rateHz(x));
+        engine.current?.setWobbleDepth(y * DEPTH_MAX);
+    };
 
     return (
         <SynthShell name="Reese Bass" tag="Neuro · Supersaw · Bass Engine" onClose={onClose} accent="#caa052">
@@ -154,10 +194,24 @@ const ReeseSynth: React.FC<ReeseSynthProps> = ({ onClose }) => {
                 <Knob label="Dirt" value={distortion} min={0} max={400} onChange={setDistortion} format={(v) => Math.round(v).toString()} />
                 <Knob label="Width" value={spread} min={0} max={3} step={0.1} onChange={setSpread} format={(v) => `${v.toFixed(1)}×`} />
             </KnobRow>
-            <Engrave>Wobble · slide to sweep the filter</Engrave>
-            <TouchStrip label="Wobble" value={cutoff} min={50} max={5000} log accent={PANEL.phosphor}
-                onChange={setCutoff} height={90} />
-            <EngageBar label="Bass Drop" active={isPlaying} onDown={handlePadDown} onUp={handlePadUp} accent="#caa052" />
+
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Engrave>Wobble Pad · ↔ rate · ↕ depth</Engrave>
+                <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 9, color: playing ? PANEL.phosphor : PANEL.inkMute, letterSpacing: 1 }}>
+                    {rateHz(padX).toFixed(1)} Hz
+                </span>
+            </div>
+            <XYPad x={padX} y={padY} active={playing} accent={PANEL.phosphor} labelX="Rate" labelY="Depth"
+                height={200} onChange={onPad}
+                onDown={() => setPadDown(true)} onUp={() => setPadDown(false)} />
+            <button onClick={() => setLatched((v) => !v)} style={{
+                width: '100%', padding: '11px 0', borderRadius: 9, cursor: 'pointer', border: 'none',
+                fontFamily: '"JetBrains Mono", monospace', fontSize: 11, letterSpacing: 2, textTransform: 'uppercase',
+                color: latched ? '#1a0d04' : PANEL.inkMute,
+                background: latched ? `linear-gradient(180deg,${PANEL.brassLite},${PANEL.brass})` : '#181410',
+                boxShadow: latched ? `0 0 18px rgba(202,160,82,0.4)` : `inset 0 0 0 1px ${PANEL.line}`,
+            }}>{latched ? '● Hold — Sustaining' : 'Hold — tap to sustain drone'}</button>
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <Engrave>Pitch</Engrave>
                 <NoteRow
