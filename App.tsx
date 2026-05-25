@@ -303,19 +303,29 @@ const App: React.FC = () => {
       setShowJamSimulator(false);
   };
 
-  // Synth Hub Launcher Card
-  const SynthCard = ({ title, desc, icon, onClick }: { title: string, desc: string, icon: string, onClick: () => void }) => (
-      <button 
+  // Synth Hub Launcher Card — vintage rack plate
+  const SynthCard = ({ title, desc, mono, onClick }: { title: string, desc: string, mono: string, onClick: () => void }) => (
+      <button
         onClick={onClick}
-        className="group relative flex flex-col items-start justify-between p-6 bg-gray-900 border border-gray-700 rounded-2xl hover:border-neon-blue hover:bg-gray-800 hover:shadow-[0_0_20px_rgba(0,243,255,0.2)] transition-all active:scale-95 text-left h-full"
+        style={{
+          position: 'relative', display: 'flex', alignItems: 'flex-start', gap: 14, textAlign: 'left', cursor: 'pointer',
+          padding: '16px 16px', borderRadius: 12, width: '100%',
+          background: 'linear-gradient(180deg, #2c2620, #1a1612)',
+          border: '1px solid rgba(202,160,82,0.25)',
+          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05), 0 4px 14px rgba(0,0,0,0.4)',
+          fontFamily: '"JetBrains Mono", monospace',
+        }}
       >
-          <div className="text-4xl mb-4 group-hover:scale-110 transition-transform duration-300 filter drop-shadow-lg">{icon}</div>
-          <div>
-              <h3 className="text-xl font-bold text-white mb-1 group-hover:text-neon-blue">{title}</h3>
-              <p className="text-xs text-gray-400 font-medium leading-relaxed">{desc}</p>
-          </div>
-          <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-              <svg className="w-6 h-6 text-neon-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+          <span style={{
+            flex: '0 0 auto', width: 44, height: 44, borderRadius: 10,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'radial-gradient(circle at 35% 28%, #f6e2a0, #caa052 40%, #6b4f1c)',
+            color: '#1a0d04', fontFamily: '"DM Serif Display", serif', fontSize: 24,
+            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.4), 0 2px 4px rgba(0,0,0,0.5)',
+          }}>{mono}</span>
+          <div style={{ minWidth: 0 }}>
+              <h3 style={{ fontFamily: '"DM Serif Display", serif', fontSize: 18, color: '#e8dcc4', margin: 0, letterSpacing: 0.3 }}>{title}</h3>
+              <p style={{ fontSize: 11, color: 'rgba(232,220,196,0.55)', margin: '3px 0 0', lineHeight: 1.45 }}>{desc}</p>
           </div>
       </button>
   );
@@ -324,66 +334,26 @@ const App: React.FC = () => {
     <div className="min-h-screen bg-gray-950 text-white font-sans flex flex-col overflow-x-hidden transition-colors duration-300" onClick={() => setActiveDropdown(null)}>
       
 
-      {/* SYNTH HUB */}
+      {/* SYNTH HUB — vintage rack catalog */}
       {showSynthsHub && (
-          <div className="fixed inset-0 z-40 bg-[#0f1115] overflow-y-auto animate-fade-in pt-20 pb-10 px-4 md:px-10">
-              <div className="max-w-6xl mx-auto">
-                  <div className="text-center mb-10">
-                      <h1 className="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500 mb-2 tracking-tighter">
-                          SYNTH WORKSTATION
-                      </h1>
-                      <p className="text-gray-400 text-sm md:text-base uppercase tracking-[0.2em] font-bold">Professional Audio Engines</p>
+          <div className="fixed inset-0 z-40 overflow-y-auto animate-fade-in" style={{ background: 'linear-gradient(180deg, #1a1612 0%, #0f0c0a 100%)' }}>
+              <div style={{ maxWidth: 760, margin: '0 auto', padding: '20px 16px 40px' }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 6 }}>
+                      <div>
+                          <h1 style={{ fontFamily: '"DM Serif Display", serif', fontSize: 30, color: '#e8dcc4', margin: 0, letterSpacing: 0.5 }}>Synth Cabinet</h1>
+                          <p style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 9.5, color: '#caa052', letterSpacing: 3, textTransform: 'uppercase', margin: '4px 0 0' }}>Eight Analog Engines</p>
+                      </div>
+                      <button onClick={() => setShowSynthsHub(false)} aria-label="Close" style={{ width: 34, height: 34, borderRadius: 9, cursor: 'pointer', background: 'rgba(0,0,0,0.35)', border: '1px solid rgba(202,160,82,0.3)', color: 'rgba(232,220,196,0.6)', fontSize: 16 }}>✕</button>
                   </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                      <SynthCard 
-                        title="Reese Bass" 
-                        desc="Face-melting neuro & dubstep supersaw engine with heavy distortion and wobble." 
-                        icon="🔊" 
-                        onClick={() => { setShowSynthsHub(false); setShowReese(true); }}
-                      />
-                      <SynthCard 
-                        title="OPL3 AdLib" 
-                        desc="1992 Sound Blaster emulator. Authentic DOOM & Duke Nukem FM synthesis." 
-                        icon="📟" 
-                        onClick={() => { setShowSynthsHub(false); setShowOPL3(true); }}
-                      />
-                      <SynthCard 
-                        title="Spectravox" 
-                        desc="10-band analog vocoder & spectral drone processor inspired by Moog." 
-                        icon="🗣️" 
-                        onClick={() => { setShowSynthsHub(false); setShowSpectravox(true); }}
-                      />
-                      <SynthCard 
-                        title="D Synth" 
-                        desc="Pixel-perfect Minimoog Model D replica. 3 Oscillators, Ladder Filter." 
-                        icon="🎹" 
-                        onClick={() => { setShowSynthsHub(false); setShowDSynth(true); }}
-                      />
-                      <SynthCard 
-                        title="Matriarch" 
-                        desc="4-note paraphonic semi-modular synthesizer with stereo delay." 
-                        icon="🌈" 
-                        onClick={() => { setShowSynthsHub(false); setShowMatriarch(true); }}
-                      />
-                      <SynthCard 
-                        title="Serum Mini" 
-                        desc="Advanced Wavetable synthesizer with 3D warping and 16-voice unison." 
-                        icon="🧬" 
-                        onClick={() => { setShowSynthsHub(false); setShowSerum(true); }}
-                      />
-                      <SynthCard 
-                        title="Vital" 
-                        desc="Spectral warping synthesizer with text-to-wavetable and deep modulation." 
-                        icon="💠" 
-                        onClick={() => { setShowSynthsHub(false); setShowVital(true); }}
-                      />
-                      <SynthCard 
-                        title="Phase Plant" 
-                        desc="Snap-in modular playground. Combine Analog, Noise, and Wavetable generators." 
-                        icon="🌿" 
-                        onClick={() => { setShowSynthsHub(false); setShowPhasePlant(true); }}
-                      />
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 12, marginTop: 18 }}>
+                      <SynthCard title="Reese Bass" mono="R" desc="Neuro & dubstep supersaw engine with heavy distortion and wobble." onClick={() => { setShowSynthsHub(false); setShowReese(true); }} />
+                      <SynthCard title="OPL3 AdLib" mono="O" desc="1992 Sound Blaster emulator. Authentic DOOM & Duke Nukem FM synthesis." onClick={() => { setShowSynthsHub(false); setShowOPL3(true); }} />
+                      <SynthCard title="Spectravox" mono="S" desc="10-band analog vocoder & spectral drone processor inspired by Moog." onClick={() => { setShowSynthsHub(false); setShowSpectravox(true); }} />
+                      <SynthCard title="D Synth" mono="D" desc="Minimoog Model D replica. 3 oscillators, ladder filter." onClick={() => { setShowSynthsHub(false); setShowDSynth(true); }} />
+                      <SynthCard title="Matriarch" mono="M" desc="4-note paraphonic semi-modular synthesizer with stereo delay." onClick={() => { setShowSynthsHub(false); setShowMatriarch(true); }} />
+                      <SynthCard title="Serum Mini" mono="W" desc="Wavetable synthesizer with 3D warping and 16-voice unison." onClick={() => { setShowSynthsHub(false); setShowSerum(true); }} />
+                      <SynthCard title="Vital" mono="V" desc="Spectral warping synthesizer with deep modulation." onClick={() => { setShowSynthsHub(false); setShowVital(true); }} />
+                      <SynthCard title="Phase Plant" mono="P" desc="Snap-in modular playground: analog, noise, and wavetable generators." onClick={() => { setShowSynthsHub(false); setShowPhasePlant(true); }} />
                   </div>
               </div>
           </div>
