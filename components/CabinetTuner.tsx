@@ -92,6 +92,9 @@ const Wordmark: React.FC<{ s: typeof SKIN[Cabinet] }> = ({ s }) => (
   </div>
 );
 
+// Display labels (the underlying instrument key stays as-is, e.g. "Violin").
+const INSTRUMENT_LABEL: Record<string, string> = { Violin: 'Fiddle' };
+
 const InstrumentTabs: React.FC<{ instruments: string[]; value: string; onChange: (n: string) => void; s: typeof SKIN[Cabinet] }> = ({ instruments, value, onChange, s }) => (
   <div style={{
     display: 'flex', gap: 0, overflowX: 'auto', maxWidth: '100%',
@@ -107,7 +110,7 @@ const InstrumentTabs: React.FC<{ instruments: string[]; value: string; onChange:
           fontFamily: SERIF, fontSize: 16, letterSpacing: 0.3,
           color: active ? s.ink : s.muted,
         }}>
-          {k}
+          {INSTRUMENT_LABEL[k] || k}
           {active && <span style={{ position: 'absolute', bottom: -1, left: 10, right: 10, height: 2, background: s.accent }} />}
         </button>
       );

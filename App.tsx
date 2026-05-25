@@ -513,7 +513,7 @@ const App: React.FC = () => {
       {/* --- VINTAGE CABINET TUNER (mobile-first) --- */}
       <CabinetTuner
         cabinet={currentCabinet}
-        instruments={Object.keys(INSTRUMENT_DATA)}
+        instruments={['Guitar', 'Banjo', 'Violin', 'Mandolin', 'Bass', 'Ukulele'].filter(k => INSTRUMENT_DATA[k])}
         instrument={instrument}
         tuningKeys={Object.keys(availableTunings)}
         tuningName={tuningName}
