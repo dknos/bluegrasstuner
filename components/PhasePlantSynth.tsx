@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
+import { SynthShell, Keys, Engrave, PANEL } from './synthkit';
 
 interface PhasePlantSynthProps {
   onClose: () => void;
@@ -221,184 +222,48 @@ const PhasePlantSynth: React.FC<PhasePlantSynthProps> = ({ onClose }) => {
         setActiveNotes(prev => prev.filter(x => x !== n));
     };
 
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 p-0 md:p-4 animate-fade-in font-sans select-none touch-manipulation">
-            <div className="relative w-full max-w-7xl h-full md:h-auto bg-[#1e2329] rounded-xl shadow-2xl overflow-hidden border border-gray-700 flex flex-col pt-14 md:pt-0">
-                
-                {/* HEADER */}
-                <div className="h-14 bg-[#161a1e] flex items-center px-6 gap-4 border-b border-gray-700 pl-16 z-50 relative">
-                    <h1 className="text-xl font-bold text-white tracking-widest uppercase">PHASE PLANT <span className="text-xs text-blue-400 bg-[#222] px-2 py-0.5 rounded ml-2">MINI</span></h1>
-                    <div className="flex gap-4 ml-auto">
-                        <button className="text-xs font-bold text-gray-400 hover:text-white">SAVE</button>
-                        <button className="text-xs font-bold text-gray-400 hover:text-white">LOAD</button>
-                        <button className="text-xs font-bold text-blue-400 hover:text-blue-300">INIT</button>
-                    </div>
-                </div>
-
-                {/* WORKSPACE */}
-                <div className="flex-1 flex overflow-hidden bg-[#111316]">
-                    
-                    {/* COL 1: GENERATORS */}
-                    <div className="flex-1 min-w-[300px] border-r border-gray-700 flex flex-col">
-                        <div className="p-2 bg-[#252a30] text-[10px] font-bold text-gray-400 uppercase tracking-widest border-b border-gray-700">Generators</div>
-                        <div className="flex-1 overflow-y-auto p-4 space-y-2">
-                            {generators.map((gen, i) => (
-                                <div key={gen.id} className="bg-[#2a2f36] rounded-l border-l-4 border-blue-500 p-3 relative group">
-                                    <div className="flex justify-between items-center mb-2">
-                                        <div className="font-bold text-white text-sm">{gen.type}</div>
-                                        <button 
-                                            onClick={() => setGenerators(generators.filter(g => g.id !== gen.id))}
-                                            className="text-gray-600 hover:text-red-500 text-xs font-bold"
-                                        >✕</button>
-                                    </div>
-                                    <div className="flex items-center gap-4">
-                                        {/* Volume Dot */}
-                                        <div className="flex flex-col items-center gap-1">
-                                            <div className="w-8 h-8 rounded-full border-2 border-blue-500 bg-black flex items-center justify-center cursor-ns-resize">
-                                                <div className="w-4 h-4 bg-blue-500 rounded-full" style={{ opacity: gen.params.level }}></div>
-                                            </div>
-                                            <span className="text-[9px] text-gray-500 font-bold">VOL</span>
-                                        </div>
-                                        
-                                        {/* Params */}
-                                        <div className="flex-1 grid grid-cols-3 gap-2">
-                                            <PhaseKnob label="Tune" value={0.5} onChange={()=>{}} />
-                                            <PhaseKnob label="Pan" value={0.5} onChange={()=>{}} />
-                                            {gen.type === 'ANALOG' && <PhaseKnob label="Shape" value={0} onChange={()=>{}} />}
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-
-                            {/* ADD BUTTONS */}
-                            <div className="grid grid-cols-3 gap-2 mt-4">
-                                <button onClick={() => addGenerator('ANALOG')} className="py-2 bg-[#1e2329] border border-blue-900 rounded text-blue-400 text-xs font-bold hover:bg-blue-900/20">+ ANALOG</button>
-                                <button onClick={() => addGenerator('WAVETABLE')} className="py-2 bg-[#1e2329] border border-green-900 rounded text-green-400 text-xs font-bold hover:bg-green-900/20">+ WAVE</button>
-                                <button onClick={() => addGenerator('NOISE')} className="py-2 bg-[#1e2329] border border-gray-600 rounded text-gray-400 text-xs font-bold hover:bg-gray-700">+ NOISE</button>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* COL 2: SNAP-IN EFFECTS */}
-                    <div className="flex-1 min-w-[300px] border-r border-gray-700 flex flex-col bg-[#16191d]">
-                        <div className="p-2 bg-[#252a30] text-[10px] font-bold text-gray-400 uppercase tracking-widest border-b border-gray-700">Snap-in Lane 1</div>
-                        <div className="flex-1 overflow-y-auto p-4 space-y-1">
-                            {/* Routing Line */}
-                            <div className="w-0.5 bg-gray-700 h-4 mx-auto mb-1"></div>
-                            
-                            {effects.map((fx, i) => (
-                                <div key={fx.id} className="flex flex-col items-center">
-                                    <div className="w-full bg-[#2a2f36] rounded border-l-4 border-yellow-600 p-2 flex items-center gap-3 relative group">
-                                        <div className="flex-1">
-                                            <div className="flex justify-between">
-                                                <span className="text-xs font-bold text-gray-200">{fx.type}</span>
-                                                <input 
-                                                    type="checkbox" 
-                                                    checked={fx.enabled} 
-                                                    onChange={() => {
-                                                        const newFx = [...effects];
-                                                        newFx[i].enabled = !newFx[i].enabled;
-                                                        setEffects(newFx);
-                                                    }}
-                                                    className="accent-yellow-500"
-                                                />
-                                            </div>
-                                            <div className="flex gap-2 mt-2">
-                                                <div className="h-1 bg-black rounded flex-1 overflow-hidden">
-                                                    <div className="h-full bg-yellow-600" style={{ width: `${fx.params.p1*100}%` }}></div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <button 
-                                            onClick={() => setEffects(effects.filter(f => f.id !== fx.id))}
-                                            className="text-gray-600 hover:text-red-500 text-xs font-bold px-2"
-                                        >✕</button>
-                                    </div>
-                                    {/* Link line */}
-                                    <div className="w-0.5 bg-gray-700 h-2 my-1"></div>
-                                </div>
-                            ))}
-
-                            <div className="text-center mt-4">
-                                <span className="text-[9px] text-gray-600 font-bold block mb-2">ADD SNAPIN</span>
-                                <div className="grid grid-cols-2 gap-2">
-                                    {['DISTORTION', 'FILTER', 'REVERB', 'DELAY', 'PHASER', 'EQ'].map(t => (
-                                        <button 
-                                            key={t}
-                                            onClick={() => addEffect(t as EffectType)}
-                                            className="px-2 py-1 bg-[#1e2329] text-[9px] font-bold text-gray-400 rounded hover:text-white border border-transparent hover:border-gray-600"
-                                        >
-                                            {t}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* COL 3: MODULATORS & MACROS */}
-                    <div className="w-48 hidden md:flex flex-col bg-[#111316] border-l border-gray-700 p-2 overflow-y-auto">
-                        <div className="text-[10px] font-bold text-gray-500 uppercase mb-4 text-center">Modulators</div>
-                        
-                        <div className="space-y-4">
-                            <div className="bg-[#1e2329] p-2 rounded border border-gray-700">
-                                <div className="text-xs font-bold text-blue-400 mb-2">LFO 1</div>
-                                <div className="h-10 bg-black rounded relative mb-2">
-                                    <svg className="w-full h-full"><path d="M0,20 Q20,0 40,20 T80,20" stroke="cyan" fill="none" strokeWidth="2"/></svg>
-                                </div>
-                                <div className="flex justify-between">
-                                    <PhaseKnob label="Rate" value={0.5} onChange={()=>{}} />
-                                    <PhaseKnob label="Depth" value={1} onChange={()=>{}} />
-                                </div>
-                            </div>
-
-                            <div className="bg-[#1e2329] p-2 rounded border border-gray-700">
-                                <div className="text-xs font-bold text-green-400 mb-2">ENV 1</div>
-                                <div className="h-10 bg-black rounded relative mb-2 opacity-50">
-                                    <svg className="w-full h-full"><polyline points="0,40 10,0 30,20 100,40" stroke="green" fill="none" strokeWidth="2"/></svg>
-                                </div>
-                                <div className="flex justify-between">
-                                    <PhaseKnob label="A" value={0} onChange={()=>{}} />
-                                    <PhaseKnob label="D" value={0.4} onChange={()=>{}} />
-                                    <PhaseKnob label="S" value={0.5} onChange={()=>{}} />
-                                    <PhaseKnob label="R" value={0.4} onChange={()=>{}} />
-                                </div>
-                            </div>
-
-                            <div className="bg-[#1e2329] p-2 rounded border border-gray-700">
-                                <div className="text-xs font-bold text-yellow-400 mb-2">MACROS</div>
-                                <div className="grid grid-cols-2 gap-2">
-                                    {[1,2,3,4].map(i => (
-                                        <div key={i} className="flex flex-col items-center">
-                                            <div className="w-8 h-8 rounded-full border-2 border-yellow-600 bg-black"></div>
-                                            <span className="text-[8px] text-gray-500 font-bold mt-1">M{i}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                </div>
-
-                {/* FOOTER: KEYBOARD */}
-                <div className="h-24 bg-[#0a0b0c] border-t border-gray-700 flex relative z-40">
-                    {Array.from({length:25},(_,i)=>i+48).map(k => (
-                        <div 
-                            key={k} 
-                            className={`flex-1 border-r border-gray-800 relative ${activeNotes.includes(k)?'bg-blue-500 shadow-[0_0_20px_blue] z-10':([1,3,6,8,10].includes(k%12)?'bg-[#111]':'bg-[#eee]')}`}
-                            onMouseDown={() => handleNoteOn(k)}
-                            onMouseUp={() => handleNoteOff(k)}
-                            onMouseLeave={() => handleNoteOff(k)}
-                            onTouchStart={(e) => { e.preventDefault(); handleNoteOn(k); }}
-                            onTouchEnd={(e) => { e.preventDefault(); handleNoteOff(k); }}
-                        ></div>
-                    ))}
-                </div>
-
-            </div>
+    const addBtn = (label: string, fn: () => void) => (
+        <button onClick={fn} style={{ padding: '8px 10px', borderRadius: 7, cursor: 'pointer', fontFamily: '"JetBrains Mono", monospace', fontSize: 9.5, letterSpacing: 0.5, textTransform: 'uppercase', border: `1px solid ${PANEL.line}`, background: '#181410', color: PANEL.inkMute }}>{label}</button>
+    );
+    const moduleCard = (title: string, onRemove: () => void, right?: React.ReactNode) => (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 8, background: 'rgba(0,0,0,0.22)', boxShadow: `inset 0 0 0 1px ${PANEL.line}`, borderLeft: `3px solid ${PANEL.brass}` }}>
+            <span style={{ flex: 1, fontFamily: '"DM Serif Display", serif', fontSize: 15, color: PANEL.ink }}>{title}</span>
+            {right}
+            <button onClick={onRemove} style={{ background: 'transparent', border: 'none', color: PANEL.inkMute, fontSize: 14, cursor: 'pointer' }}>✕</button>
         </div>
     );
+
+    return (
+        <SynthShell name="Phase Plant" tag="Snap-In Modular Synth" onClose={onClose} accent={PANEL.brass}>
+            <Engrave>Generators</Engrave>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {generators.map((gen) => moduleCard(gen.type, () => setGenerators(generators.filter(g => g.id !== gen.id))))}
+                <div style={{ display: 'flex', gap: 6 }}>
+                    {addBtn('+ Analog', () => addGenerator('ANALOG'))}
+                    {addBtn('+ Wave', () => addGenerator('WAVETABLE'))}
+                    {addBtn('+ Noise', () => addGenerator('NOISE'))}
+                </div>
+            </div>
+
+            <Engrave>Snap-In Lane</Engrave>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {effects.map((fx, i) => moduleCard(fx.type, () => setEffects(effects.filter(f => f.id !== fx.id)),
+                    <button onClick={() => { const n = [...effects]; n[i].enabled = !n[i].enabled; setEffects(n); }}
+                        style={{ width: 38, height: 22, borderRadius: 999, cursor: 'pointer', border: 'none', position: 'relative',
+                            background: fx.enabled ? PANEL.brass : '#181410', boxShadow: `inset 0 0 0 1px ${PANEL.line}` }}>
+                        <span style={{ position: 'absolute', top: 2, left: fx.enabled ? 18 : 2, width: 18, height: 18, borderRadius: 999, background: fx.enabled ? '#1a0d04' : PANEL.inkMute, transition: 'left .12s' }} />
+                    </button>
+                ))}
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {(['DISTORTION', 'FILTER', 'REVERB', 'DELAY', 'PHASER', 'EQ'] as EffectType[]).map(t => addBtn(t, () => addEffect(t)))}
+                </div>
+            </div>
+
+            <Engrave>Keyboard</Engrave>
+            <Keys octaves={2} startMidi={48} activeNotes={activeNotes} onNoteOn={handleNoteOn} onNoteOff={handleNoteOff} />
+        </SynthShell>
+    );
 };
+
 
 export default PhasePlantSynth;

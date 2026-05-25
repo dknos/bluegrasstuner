@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { SynthShell, Knob, KnobRow, Keys, Rocker, Engrave, PANEL } from './synthkit';
 
 interface VitalSynthProps {
   onClose: () => void;
@@ -395,172 +396,38 @@ const VitalSynth: React.FC<VitalSynthProps> = ({ onClose }) => {
         setLfoParams(newLfos);
     };
 
+    const SHAPES = ['sine', 'triangle', 'sawtooth', 'square'];
+
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 p-0 md:p-4 animate-fade-in font-sans select-none touch-manipulation">
-            <div className="relative w-full max-w-7xl h-full md:h-auto bg-[#141414] rounded-xl shadow-[0_0_60px_rgba(255,100,0,0.15)] overflow-hidden border border-gray-800 flex flex-col pt-14 md:pt-0">
-                
-                {/* HEADER */}
-                <div className="h-16 bg-[#1a1a1a] flex items-center px-6 gap-6 border-b border-gray-700 pl-16 z-50 relative">
-                    <h1 className="text-2xl font-black text-white tracking-widest uppercase italic">VITAL <span className="text-sm text-orange-500 not-italic font-bold ml-1">SPECTRAL</span></h1>
-                    
-                    <div className="flex gap-4 ml-auto">
-                        <button onClick={randomize} className="px-4 py-1.5 bg-[#222] hover:bg-[#333] border border-gray-600 rounded text-orange-500 font-bold text-xs uppercase flex items-center gap-2">
-                            <span>🎲 Randomize</span>
-                        </button>
-                        <button className="px-4 py-1.5 bg-[#222] hover:bg-[#333] border border-gray-600 rounded text-gray-300 font-bold text-xs uppercase">
-                            Init Preset
-                        </button>
-                    </div>
-                </div>
-                
-                {/* MAIN CONTENT */}
-                <div className="flex-1 bg-[#111] p-2 flex flex-col md:flex-row gap-2 overflow-y-auto">
-                    
-                    {/* LEFT COLUMN: OSCILLATORS */}
-                    <div className="flex-1 flex flex-col gap-2 min-w-[320px]">
-                        {/* OSC 1 */}
-                        <div className="bg-[#1a1a1a] rounded border border-gray-700 p-3 relative overflow-hidden">
-                            <div className="flex justify-between items-center mb-2">
-                                <span className="text-orange-500 font-black text-sm bg-black px-2 rounded">OSC 1</span>
-                                <div className="flex gap-2">
-                                    <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                                    <div className="w-2 h-2 rounded-full bg-gray-600"></div>
-                                </div>
-                            </div>
-                            
-                            {/* Spectral Display */}
-                            <div className="w-full h-32 bg-[#050505] border border-gray-600 rounded mb-3 relative overflow-hidden group">
-                                {/* Spectral Warp Grid */}
-                                <div className="absolute inset-0 bg-[linear-gradient(transparent_9px,#222_1px)] bg-[length:100%_10px] opacity-50"></div>
-                                <svg className="w-full h-full absolute inset-0" preserveAspectRatio="none">
-                                    <path d={`M0,64 C${100+warp*100},${64-warp*60} ${200-warp*100},${64+warp*60} 300,64`} stroke="orange" fill="none" strokeWidth="3" vectorEffect="non-scaling-stroke" className="drop-shadow-[0_0_10px_orange]" />
-                                </svg>
-                                <div className="absolute bottom-2 right-2 text-orange-500 text-[9px] font-bold">SPECTRAL MORPH</div>
-                            </div>
-
-                            <div className="flex justify-between px-2">
-                                <VitalKnob label="Level" value={osc1Vol} min={0} max={1} onChange={setOsc1Vol} onDrop={(s)=>handleModDrop('osc1Vol', s)} modAmt={getModAmt('osc1Vol')} />
-                                <VitalKnob label="Pitch" value={osc1Tune} min={-24} max={24} step={1} onChange={setOsc1Tune} />
-                                <VitalKnob label="Pan" value={osc1Pan} min={-1} max={1} onChange={setOsc1Pan} />
-                                <VitalKnob label="Wave" value={oscWave} min={0} max={1} onChange={setOscWave} />
-                            </div>
-                        </div>
-
-                        {/* FILTER */}
-                        <div className="bg-[#1a1a1a] rounded border border-gray-700 p-3">
-                            <div className="flex justify-between mb-2">
-                                <span className="text-orange-500 font-black text-sm">FILTER 1</span>
-                                <span className="text-gray-500 text-[9px] font-bold">ANALOG 12dB</span>
-                            </div>
-                            <div className="flex justify-around">
-                                <div className="scale-125">
-                                    <VitalKnob label="Cutoff" value={cutoff} min={20} max={20000} onChange={setCutoff} onDrop={(s)=>handleModDrop('cutoff', s)} modAmt={getModAmt('cutoff')} />
-                                </div>
-                                <VitalKnob label="Res" value={res} min={0} max={20} onChange={setRes} />
-                                <VitalKnob label="Drive" value={0} min={0} max={1} onChange={()=>{}} />
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* CENTER COLUMN: MODULATION */}
-                    <div className="flex-[1.5] flex flex-col gap-2 min-w-[320px]">
-                        
-                        {/* WARP & STRETCH */}
-                        <div className="h-24 bg-[#1a1a1a] rounded border border-gray-700 p-3 flex items-center justify-around">
-                            <VitalKnob label="Spectral Warp" value={warp} min={0} max={1} onChange={setWarp} onDrop={(s)=>handleModDrop('warp', s)} modAmt={getModAmt('warp')} />
-                            <VitalKnob label="Formant" value={0.5} min={0} max={1} onChange={()=>{}} />
-                            <VitalKnob label="Stretch" value={0} min={0} max={1} onChange={()=>{}} />
-                            <div className="w-px h-12 bg-gray-700"></div>
-                            <button className="px-4 py-2 bg-black border border-orange-500/50 text-orange-500 rounded text-xs font-bold hover:bg-orange-500/10">
-                                RANDOMIZE PHASE
-                            </button>
-                        </div>
-
-                        {/* LFO GRID */}
-                        <div className="flex-1 grid grid-cols-2 grid-rows-2 gap-2">
-                            {lfoParams.map((lfo, i) => (
-                                <div key={i} className="bg-[#1a1a1a] rounded border border-gray-700 p-2 flex flex-col relative">
-                                    <div className="flex justify-between items-center mb-1">
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-gray-400 font-bold text-xs">LFO {i+1}</span>
-                                            {/* DRAGGABLE MOD SOURCE */}
-                                            <div 
-                                                className="w-4 h-4 rounded-full bg-green-500 border border-white cursor-grab active:cursor-grabbing shadow-[0_0_10px_green]"
-                                                draggable
-                                                onDragStart={(e) => handleLfoDragStart(e, i)}
-                                            ></div>
-                                        </div>
-                                        <select 
-                                            value={lfo.shape}
-                                            onChange={(e) => updateLfoParam(i, 'shape', e.target.value)}
-                                            className="bg-black text-[9px] text-gray-400 border border-gray-600 rounded"
-                                        >
-                                            <option value="sine">Sine</option>
-                                            <option value="triangle">Tri</option>
-                                            <option value="sawtooth">Saw</option>
-                                            <option value="square">Sqr</option>
-                                        </select>
-                                    </div>
-                                    <div className="flex-1 relative">
-                                        <LFOVisual index={i} rate={lfo.rate} shape={lfo.shape} />
-                                    </div>
-                                    <div className="mt-2 flex justify-between px-4">
-                                        <VitalKnob label="Freq" value={lfo.rate} min={0.1} max={20} onChange={(v) => updateLfoParam(i, 'rate', v)} />
-                                        <VitalKnob label="Smooth" value={0} min={0} max={1} onChange={()=>{}} />
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* RIGHT COLUMN: FX & ENV */}
-                    <div className="w-full md:w-48 bg-[#1a1a1a] rounded border border-gray-700 p-2 flex flex-col gap-2">
-                        <h3 className="text-gray-500 font-bold text-xs text-center border-b border-gray-700 pb-1">EFFECTS</h3>
-                        {['Chorus', 'Compressor', 'Distortion', 'Delay', 'Reverb', 'EQ'].map(fx => (
-                            <div key={fx} className="h-8 bg-black rounded border border-gray-800 flex items-center px-2 justify-between group hover:border-gray-600 cursor-pointer">
-                                <div className="flex items-center gap-2">
-                                    <div className="w-3 h-3 rounded-full border border-gray-600 group-hover:bg-blue-500"></div>
-                                    <span className="text-[10px] text-gray-400 font-bold uppercase">{fx}</span>
-                                </div>
-                                <div className="w-16 h-1 bg-gray-800 rounded overflow-hidden">
-                                    <div className="h-full bg-blue-500 w-1/2"></div>
-                                </div>
-                            </div>
-                        ))}
-                        
-                        <div className="mt-auto border-t border-gray-700 pt-2">
-                            <h3 className="text-gray-500 font-bold text-xs text-center mb-2">ENV 1</h3>
-                            <div className="h-16 w-full bg-black rounded relative opacity-70">
-                                <svg className="w-full h-full"><polyline points="0,64 10,0 40,32 100,64" fill="none" stroke="orange" strokeWidth="2" /></svg>
-                            </div>
-                            <div className="flex justify-between mt-2">
-                                <VitalKnob label="A" value={0} min={0} max={1} onChange={()=>{}} />
-                                <VitalKnob label="D" value={0.4} min={0} max={1} onChange={()=>{}} />
-                                <VitalKnob label="S" value={0.5} min={0} max={1} onChange={()=>{}} />
-                                <VitalKnob label="R" value={0.4} min={0} max={1} onChange={()=>{}} />
-                            </div>
-                        </div>
-                    </div>
-
-                </div>
-
-                {/* KEYBOARD */}
-                <div className="h-24 bg-[#0a0a0a] border-t border-gray-700 flex relative z-40">
-                    {Array.from({length:25},(_,i)=>i+48).map(k => (
-                        <div 
-                            key={k} 
-                            className={`flex-1 border-r border-gray-800 relative ${activeNotes.includes(k)?'bg-orange-500 shadow-[0_0_20px_orange] z-10':([1,3,6,8,10].includes(k%12)?'bg-[#111]':'bg-[#ccc]')}`}
-                            onMouseDown={() => handleNoteOn(k)}
-                            onMouseUp={() => handleNoteOff(k)}
-                            onMouseLeave={() => handleNoteOff(k)}
-                            onTouchStart={(e) => { e.preventDefault(); handleNoteOn(k); }}
-                            onTouchEnd={(e) => { e.preventDefault(); handleNoteOff(k); }}
-                        ></div>
-                    ))}
-                </div>
-
+        <SynthShell name="Vital" tag="Spectral Wavetable" onClose={onClose} accent={PANEL.brass}>
+            <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={randomize} style={{ padding: '7px 14px', borderRadius: 999, cursor: 'pointer', fontFamily: '"JetBrains Mono", monospace', fontSize: 10, letterSpacing: 1, textTransform: 'uppercase', border: `1px solid ${PANEL.brass}`, background: PANEL.brass, color: '#1a0d04' }}>⚄ Randomize</button>
             </div>
-        </div>
+
+            <Engrave>Oscillator · Wavetable</Engrave>
+            <KnobRow>
+                <Knob label="Wave" value={oscWave} min={0} max={1} step={0.01} onChange={setOscWave} size={70} />
+                <Knob label="Warp" value={warp} min={0} max={1} step={0.01} onChange={setWarp} size={70} />
+            </KnobRow>
+
+            <Engrave>Filter</Engrave>
+            <KnobRow>
+                <Knob label="Cutoff" value={cutoff} min={50} max={8000} log onChange={setCutoff} format={(v) => `${Math.round(v)}`} size={70} />
+                <Knob label="Resonance" value={res} min={0} max={30} onChange={setRes} size={70} />
+            </KnobRow>
+
+            <Engrave>Modulation · LFO</Engrave>
+            {lfoParams.map((p, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '8px 12px', borderRadius: 8, background: 'rgba(0,0,0,0.2)', boxShadow: `inset 0 0 0 1px ${PANEL.line}` }}>
+                    <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: PANEL.inkMute, letterSpacing: 1, width: 44 }}>LFO {i + 1}</span>
+                    <Knob label="Rate" value={p.rate} min={0.1} max={20} step={0.1} onChange={(v) => updateLfoParam(i, 'rate', v)} size={48} format={(v) => `${v.toFixed(1)}`} />
+                    <Rocker options={['Sin', 'Tri', 'Saw', 'Sqr']} value={SHAPES.indexOf(p.shape)} onChange={(idx) => updateLfoParam(i, 'shape', SHAPES[idx])} />
+                </div>
+            ))}
+
+            <Engrave>Keyboard</Engrave>
+            <Keys octaves={2} startMidi={48} activeNotes={activeNotes} onNoteOn={handleNoteOn} onNoteOff={handleNoteOff} />
+        </SynthShell>
     );
 };
 

@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { SynthShell, Knob, KnobRow, Keys, Rocker, Engrave, PANEL } from './synthkit';
 
 interface SerumSynthProps {
   onClose: () => void;
@@ -534,235 +535,67 @@ const SerumSynth: React.FC<SerumSynthProps> = ({ onClose }) => {
         if(s.lfoDepth !== undefined) setLfoDepth(s.lfoDepth);
         
         if(s.fxDist !== undefined) setFxDist(s.fxDist);
-        
+
         setShowPresets(false);
     };
 
+    const WARP = ['Off', 'Sync', 'FM (Sub)', 'AM (Sub)'] as WarpMode[];
+    const FILT = ['lowpass', 'highpass', 'bandpass'] as FilterType[];
+    const LFOS = ['sine', 'sawtooth', 'square'] as const;
+
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 p-0 md:p-4 animate-fade-in font-sans touch-none select-none">
-            <div className="relative w-full max-w-6xl h-full md:h-auto bg-[#1a1c20] rounded-xl shadow-2xl overflow-hidden border border-gray-700 flex flex-col pt-14 md:pt-0">
-                
-                {/* HEADER */}
-                <div className="flex-none h-14 bg-[#121416] flex items-center justify-between px-6 border-b border-gray-700 pl-16 relative z-50">
-                    <div className="flex items-center gap-4">
-                        <h1 className="text-2xl font-black text-white tracking-widest uppercase italic">SERUM <span className="text-xs text-[#00ff00] not-italic ml-1">MINI</span></h1>
-                        <button 
-                            onClick={() => setShowPresets(!showPresets)}
-                            className="bg-[#222] border border-gray-600 text-[#00ff00] px-4 py-1 rounded text-xs font-bold uppercase hover:bg-[#333] flex items-center gap-2"
-                        >
-                            <span>Presets ▼</span>
-                        </button>
-                    </div>
-                    {/* Master Vol */}
-                    <div className="flex items-center gap-2">
-                        <span className="text-[9px] font-bold text-gray-500 uppercase">Master</span>
-                        <div className="w-32 h-2 bg-black rounded overflow-hidden border border-gray-700">
-                            <div className="h-full bg-[#00ff00]" style={{ width: '60%' }}></div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* PRESET MENU */}
-                {showPresets && (
-                    <div className="absolute top-14 left-16 z-[60] bg-[#111] border border-[#00ff00] rounded-lg shadow-2xl p-2 grid grid-cols-2 md:grid-cols-4 gap-2 w-[80%] max-h-[60vh] overflow-y-auto">
-                        {PRESETS.map((p, i) => (
-                            <button 
-                                key={i} 
-                                onClick={() => loadPreset(p)}
-                                className="text-left p-2 hover:bg-[#222] rounded group"
-                            >
-                                <div className="text-[#00ff00] font-bold text-xs">{p.name}</div>
-                                <div className="text-gray-500 text-[9px] uppercase">{p.category}</div>
-                            </button>
-                        ))}
-                    </div>
-                )}
-
-                {/* MAIN GUI */}
-                <div className="flex-1 flex flex-col md:flex-row bg-[#222] overflow-y-auto">
-                    
-                    {/* LEFT: OSCILLATOR A */}
-                    <div className="flex-1 p-4 border-r border-black flex flex-col gap-4 min-w-[300px]">
-                        <div className="flex justify-between items-center mb-1">
-                            <span className="text-[#00ff00] font-bold text-xs bg-black px-2 py-0.5 rounded">OSC A</span>
-                            <div className="flex gap-2">
-                                <span className="text-[9px] text-gray-400 font-bold uppercase">Pan</span>
-                                <span className="text-[9px] text-gray-400 font-bold uppercase">Level</span>
-                            </div>
-                        </div>
-                        
-                        {/* 3D VISUALIZER */}
-                        <div className="h-32 w-full bg-[#050505] rounded border border-gray-600 relative group cursor-grab active:cursor-grabbing overflow-hidden">
-                            <Wavetable3D pos={wtPos} onChange={setWtPos} />
-                            <div className="absolute bottom-1 right-1 text-[9px] text-gray-500">WT POS: {(wtPos*256).toFixed(0)}</div>
-                        </div>
-
-                        {/* OSC CONTROLS */}
-                        <div className="grid grid-cols-4 gap-4 bg-[#181818] p-3 rounded border border-gray-700">
-                            <SerumKnob label="Unison" value={unison} min={1} max={7} step={1} onChange={setUnison} />
-                            <SerumKnob label="Detune" value={detune} min={0} max={0.5} onChange={setDetune} />
-                            <SerumKnob label="Blend" value={blend} min={0} max={1} onChange={setBlend} />
-                            <SerumKnob label="Phase" value={0.5} min={0} max={1} onChange={()=>{}} color="#555" />
-                        </div>
-
-                        {/* WARP SECTION */}
-                        <div className="bg-[#181818] p-3 rounded border border-gray-700 flex flex-col gap-2">
-                            <div className="flex justify-between">
-                                <span className="text-[9px] text-gray-400 font-bold uppercase">Warp Mode</span>
-                                <select 
-                                    value={warpMode} 
-                                    onChange={(e) => setWarpMode(e.target.value as any)}
-                                    className="bg-black text-[#00ff00] text-[9px] border border-gray-600 rounded px-1 outline-none"
-                                >
-                                    <option>Off</option>
-                                    <option>Sync</option>
-                                    <option>FM (Sub)</option>
-                                    <option>AM (Sub)</option>
-                                </select>
-                            </div>
-                            <div className="flex justify-center pt-2">
-                                <SerumKnob label="Warp Amt" value={warpAmt} min={0} max={1} onChange={setWarpAmt} />
-                            </div>
-                        </div>
-
-                        {/* SUB & NOISE MIXER */}
-                        <div className="bg-[#181818] p-3 rounded border border-gray-700 flex justify-around">
-                            <SerumKnob label="Sub Vol" value={subVol} min={0} max={1} onChange={setSubVol} color="#00aaff" />
-                            <SerumKnob label="Noise" value={noiseVol} min={0} max={1} onChange={setNoiseVol} color="#aaa" />
-                        </div>
-                    </div>
-
-                    {/* RIGHT: FILTER & MODULATION */}
-                    <div className="flex-1 p-4 flex flex-col gap-4 min-w-[300px]">
-                        
-                        {/* FILTER */}
-                        <div className="bg-[#181818] p-4 rounded border border-gray-600 relative overflow-hidden">
-                            <div className="absolute top-0 left-0 bg-[#00ff00] px-2 py-0.5 text-[9px] text-black font-bold">FILTER</div>
-                            <div className="flex justify-center gap-8 mt-4">
-                                <div className="scale-125">
-                                    <SerumKnob label="Cutoff" value={cutoff} min={20} max={20000} onChange={setCutoff} size="lg" />
-                                </div>
-                                <SerumKnob label="Res" value={res} min={0} max={20} onChange={setRes} />
-                                <SerumKnob label="Drive" value={drive} min={0} max={1} onChange={setDrive} />
-                            </div>
-                            <div className="mt-4 flex justify-center">
-                                <div className="flex bg-black rounded p-1 gap-1">
-                                    {['lowpass', 'highpass', 'bandpass'].map(t => (
-                                        <button 
-                                            key={t}
-                                            onClick={() => setFilterType(t as any)}
-                                            className={`px-3 py-1 text-[8px] uppercase font-bold rounded ${filterType === t ? 'bg-[#00ff00] text-black' : 'text-gray-500'}`}
-                                        >
-                                            {t.replace('pass','')}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* ENVELOPE 1 */}
-                        <div className="bg-[#181818] p-2 rounded border border-gray-700">
-                            <div className="flex justify-between items-center border-b border-gray-700 pb-1 mb-2">
-                                <span className="text-xs text-gray-300 font-bold pl-2">ENV 1</span>
-                                <span className="text-[9px] text-gray-500">AMP / FILTER</span>
-                            </div>
-                            <div className="flex justify-between px-2">
-                                <SerumKnob label="Attack" value={envA} min={0.001} max={2} onChange={setEnvA} color="#00aaff" />
-                                <SerumKnob label="Decay" value={envD} min={0.001} max={2} onChange={setEnvD} color="#00aaff" />
-                                <SerumKnob label="Sustain" value={envS} min={0} max={1} onChange={setEnvS} color="#00aaff" />
-                                <SerumKnob label="Release" value={envR} min={0.001} max={5} onChange={setEnvR} color="#00aaff" />
-                                <SerumKnob label="Mod Amt" value={envMod} min={0} max={1} onChange={setEnvMod} color="#00aaff" />
-                            </div>
-                            {/* Visual Env SVG */}
-                            <div className="h-10 w-full mt-2 bg-black rounded opacity-50 relative">
-                                <svg className="w-full h-full" preserveAspectRatio="none">
-                                    <polyline 
-                                        points={`0,40 ${envA*20},0 ${(envA+envD)*20},${40*(1-envS)} 100,${40*(1-envS)}`} 
-                                        fill="none" stroke="#00aaff" strokeWidth="2" 
-                                    />
-                                </svg>
-                            </div>
-                        </div>
-
-                        {/* LFO 1 */}
-                        <div className="bg-[#181818] p-2 rounded border border-gray-700">
-                            <div className="flex justify-between items-center border-b border-gray-700 pb-1 mb-2">
-                                <span className="text-xs text-gray-300 font-bold pl-2">LFO 1</span>
-                                <div className="flex gap-1">
-                                    {['sine','sawtooth','square'].map(s => (
-                                        <button key={s} onClick={() => setLfoShape(s as any)} className={`w-3 h-3 rounded-full ${lfoShape === s ? 'bg-[#00ff00]' : 'bg-gray-700'}`}></button>
-                                    ))}
-                                </div>
-                            </div>
-                            <div className="flex justify-around">
-                                <SerumKnob label="Rate" value={lfoRate} min={0.1} max={20} onChange={setLfoRate} />
-                                <div className="flex-1 mx-2 h-12 bg-black rounded relative overflow-hidden border border-gray-800">
-                                    {/* LFO Animation */}
-                                    <div className="absolute inset-0 bg-[#00ff00]/20 animate-pulse" style={{ animationDuration: `${1/lfoRate}s` }}></div>
-                                    <svg className="w-full h-full" preserveAspectRatio="none">
-                                        <path d="M0,24 Q50,0 100,24 T200,24" stroke="#00ff00" fill="none" strokeWidth="2" />
-                                    </svg>
-                                </div>
-                                <SerumKnob label="Depth" value={lfoDepth} min={0} max={1} onChange={setLfoDepth} />
-                            </div>
-                        </div>
-
-                        {/* FX RACK */}
-                        <div className="bg-[#111] p-2 rounded border-t-2 border-[#00ff00] flex justify-between gap-1 overflow-x-auto">
-                            <div className="flex flex-col items-center min-w-[50px] bg-[#181818] rounded p-1">
-                                <span className="text-[7px] font-bold text-gray-400 mb-1">DIST</span>
-                                <SerumKnob label="Drive" value={fxDist} min={0} max={1} onChange={setFxDist} color="red" />
-                            </div>
-                            <div className="flex flex-col items-center min-w-[50px] bg-[#181818] rounded p-1">
-                                <span className="text-[7px] font-bold text-gray-400 mb-1">DELAY</span>
-                                <SerumKnob label="Mix" value={fxDelay} min={0} max={1} onChange={setFxDelay} color="orange" />
-                            </div>
-                            <div className="flex flex-col items-center min-w-[50px] bg-[#181818] rounded p-1">
-                                <span className="text-[7px] font-bold text-gray-400 mb-1">REV</span>
-                                <SerumKnob label="Mix" value={fxRev} min={0} max={1} onChange={setFxRev} color="cyan" />
-                            </div>
-                            <div className="flex flex-col items-center min-w-[50px] bg-[#181818] rounded p-1">
-                                <span className="text-[7px] font-bold text-gray-400 mb-1">COMP</span>
-                                <SerumKnob label="Thresh" value={fxComp} min={0} max={1} onChange={setFxComp} color="white" />
-                            </div>
-                        </div>
-
-                    </div>
-                </div>
-
-                {/* KEYBOARD FOOTER */}
-                <div className="h-24 bg-[#0a0a0a] border-t border-gray-600 flex relative z-40">
-                    {Array.from({length: 25}, (_, i) => i + 48).map(note => {
-                        const isBlack = [1,3,6,8,10].includes(note % 12);
-                        if(isBlack) return null;
-                        const active = activeNotes.includes(note);
-                        return (
-                            <div 
-                                key={note} 
-                                className={`flex-1 border-r border-gray-400 rounded-b relative ${active ? 'bg-[#00ff00] shadow-[0_0_15px_#00ff00] z-10' : 'bg-white'}`}
-                                onMouseDown={() => handleNoteOn(note)}
-                                onMouseUp={() => handleNoteOff(note)}
-                                onMouseLeave={() => handleNoteOff(note)}
-                                onTouchStart={(e) => { e.preventDefault(); handleNoteOn(note); }}
-                                onTouchEnd={(e) => { e.preventDefault(); handleNoteOff(note); }}
-                            >
-                                {[1,3,6,8,10].includes((note+1)%12) && (
-                                    <div 
-                                        className={`absolute top-0 -right-[30%] w-[60%] h-[60%] border border-black rounded-b z-20 ${activeNotes.includes(note+1) ? 'bg-[#005500]' : 'bg-black'}`}
-                                        onMouseDown={(e) => { e.stopPropagation(); handleNoteOn(note+1); }}
-                                        onMouseUp={(e) => { e.stopPropagation(); handleNoteOff(note+1); }}
-                                        onMouseLeave={(e) => { e.stopPropagation(); handleNoteOff(note+1); }}
-                                        onTouchStart={(e) => { e.stopPropagation(); e.preventDefault(); handleNoteOn(note+1); }}
-                                        onTouchEnd={(e) => { e.stopPropagation(); e.preventDefault(); handleNoteOff(note+1); }}
-                                    ></div>
-                                )}
-                            </div>
-                        )
-                    })}
-                </div>
-
+        <SynthShell name="Serum Mini" tag="Wavetable · 3D Warp · Unison" onClose={onClose} accent={PANEL.brass}>
+            <Engrave>Patch</Engrave>
+            <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 4 }}>
+                {PRESETS.map((pr, i) => (
+                    <button key={i} onClick={() => loadPreset(pr)} style={{ flex: '0 0 auto', padding: '8px 12px', borderRadius: 7, cursor: 'pointer', fontFamily: '"JetBrains Mono", monospace', fontSize: 10, letterSpacing: 0.5, textTransform: 'uppercase', whiteSpace: 'nowrap', border: `1px solid ${PANEL.line}`, background: '#181410', color: PANEL.inkMute }}>{pr.name}</button>
+                ))}
             </div>
-        </div>
+
+            <Engrave>Oscillator</Engrave>
+            <KnobRow>
+                <Knob label="WT Pos" value={wtPos} min={0} max={1} step={0.01} onChange={setWtPos} size={54} />
+                <Knob label="Unison" value={unison} min={1} max={7} step={1} onChange={setUnison} size={54} />
+                <Knob label="Detune" value={detune} min={0} max={1} step={0.01} onChange={setDetune} size={54} />
+                <Knob label="Blend" value={blend} min={0} max={1} step={0.01} onChange={setBlend} size={54} />
+                <Knob label="Coarse" value={coarse} min={-24} max={24} step={1} onChange={setCoarse} size={54} />
+                <Knob label="Sub" value={subVol} min={0} max={1} step={0.01} onChange={setSubVol} size={54} />
+                <Knob label="Noise" value={noiseVol} min={0} max={1} step={0.01} onChange={setNoiseVol} size={54} />
+                <Knob label="Warp" value={warpAmt} min={0} max={1} step={0.01} onChange={setWarpAmt} size={54} />
+            </KnobRow>
+            <Rocker label="Warp Mode" options={WARP} value={WARP.indexOf(warpMode)} onChange={(i) => setWarpMode(WARP[i])} />
+
+            <Engrave>Filter</Engrave>
+            <KnobRow>
+                <Knob label="Cutoff" value={cutoff} min={50} max={12000} log onChange={setCutoff} format={(v) => `${Math.round(v)}`} size={58} />
+                <Knob label="Reso" value={res} min={0} max={30} onChange={setRes} size={58} />
+                <Knob label="Drive" value={drive} min={0} max={1} step={0.01} onChange={setDrive} size={58} />
+            </KnobRow>
+            <Rocker label="Type" options={['LP', 'HP', 'BP']} value={FILT.indexOf(filterType)} onChange={(i) => setFilterType(FILT[i])} />
+
+            <Engrave>Envelope</Engrave>
+            <KnobRow>
+                <Knob label="Attack" value={envA} min={0.001} max={4} step={0.01} onChange={setEnvA} format={(v) => `${v.toFixed(2)}s`} size={50} />
+                <Knob label="Decay" value={envD} min={0.01} max={4} step={0.01} onChange={setEnvD} format={(v) => `${v.toFixed(2)}s`} size={50} />
+                <Knob label="Sustain" value={envS} min={0} max={1} step={0.01} onChange={setEnvS} size={50} />
+                <Knob label="Release" value={envR} min={0.01} max={5} step={0.01} onChange={setEnvR} format={(v) => `${v.toFixed(2)}s`} size={50} />
+                <Knob label="Env→Cut" value={envMod} min={0} max={1} step={0.01} onChange={setEnvMod} size={50} />
+            </KnobRow>
+
+            <Engrave>LFO · FX</Engrave>
+            <KnobRow>
+                <Knob label="LFO Rate" value={lfoRate} min={0.1} max={20} step={0.1} onChange={setLfoRate} format={(v) => `${v.toFixed(1)}`} size={50} />
+                <Knob label="LFO Dep" value={lfoDepth} min={0} max={1} step={0.01} onChange={setLfoDepth} size={50} />
+                <Knob label="Dist" value={fxDist} min={0} max={1} step={0.01} onChange={setFxDist} size={50} />
+                <Knob label="Delay" value={fxDelay} min={0} max={1} step={0.01} onChange={setFxDelay} size={50} />
+                <Knob label="Reverb" value={fxRev} min={0} max={1} step={0.01} onChange={setFxRev} size={50} />
+                <Knob label="Comp" value={fxComp} min={0} max={1} step={0.01} onChange={setFxComp} size={50} />
+            </KnobRow>
+            <Rocker label="LFO Shape" options={['Sin', 'Saw', 'Sqr']} value={LFOS.indexOf(lfoShape)} onChange={(i) => setLfoShape(LFOS[i])} />
+
+            <Engrave>Keyboard</Engrave>
+            <Keys octaves={2} startMidi={48} activeNotes={activeNotes} onNoteOn={handleNoteOn} onNoteOff={handleNoteOff} />
+        </SynthShell>
     );
 };
 
