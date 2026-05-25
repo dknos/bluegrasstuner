@@ -2,7 +2,7 @@
 import React from 'react';
 import { NoteData } from '../types';
 
-export type Cabinet = 'heirloom' | 'studio' | 'workshop';
+export type Cabinet = 'heirloom' | 'studio' | 'workshop' | 'happygirl';
 
 interface TunerGaugeProps {
   noteData: NoteData | null;
@@ -82,9 +82,9 @@ const BrassScrew: React.FC<{ size?: number; style?: React.CSSProperties }> = ({ 
 interface MeterProps { cents: number; locked: boolean; note: string; octave: number; freq: number; target: number; }
 
 // CENTS chip — shared readout
-const CentsChip: React.FC<{ cents: number; locked: boolean; tone?: 'paper' | 'dark' }> = ({ cents, locked, tone = 'paper' }) => {
-  const ink = tone === 'paper' ? '#1a1108' : '#efe2c0';
-  const muted = tone === 'paper' ? 'rgba(26,17,8,0.55)' : 'rgba(239,226,192,0.55)';
+const CentsChip: React.FC<{ cents: number; locked: boolean; tone?: 'paper' | 'dark' | 'pearl' }> = ({ cents, locked, tone = 'paper' }) => {
+  const ink = tone === 'pearl' ? '#4a1d52' : tone === 'paper' ? '#1a1108' : '#efe2c0';
+  const muted = tone === 'pearl' ? 'rgba(74,29,82,0.55)' : tone === 'paper' ? 'rgba(26,17,8,0.55)' : 'rgba(239,226,192,0.55)';
   const c = Math.round(cents);
   const sign = c > 0 ? '+' : c < 0 ? '−' : '±';
   const abs = Math.abs(c).toString().padStart(2, '0');
@@ -100,7 +100,15 @@ const CentsChip: React.FC<{ cents: number; locked: boolean; tone?: 'paper' | 'da
 };
 
 // ── NEEDLE METER — classic VU on cream face ──
-const NeedleMeter: React.FC<MeterProps> = ({ cents, locked }) => {
+// Needle face palettes. Only one cabinet renders at a time, so the shared
+// gradient ids never collide.
+const NEEDLE_PALETTE = {
+  cream: { face: ['#fbf2d2', '#efe2c0', '#d9c490'], needle: ['#c4422a', '#7a1d10'], arrow: '#c4422a', ink: '#2a1808', ink2: '#3a2415', accent: '#9b3221', frame: '#caa052', shine: 'rgba(255,230,160,0.7)' },
+  pearl: { face: ['#fdf3fb', '#f1d9f0', '#dcafe0'], needle: ['#e0609f', '#a83478'], arrow: '#e0609f', ink: '#4a1d52', ink2: '#5a2d62', accent: '#b03a86', frame: '#d6a6cf', shine: 'rgba(255,235,250,0.8)' },
+};
+
+const NeedleMeter: React.FC<MeterProps & { variant?: 'cream' | 'pearl' }> = ({ cents, locked, variant = 'cream' }) => {
+  const c0 = NEEDLE_PALETTE[variant];
   const ANGLE = 55;
   const angle = Math.max(-ANGLE, Math.min(ANGLE, cents * ANGLE / 50));
   const ticks: { x1: number; y1: number; x2: number; y2: number; c: number; major: boolean }[] = [];
@@ -115,37 +123,37 @@ const NeedleMeter: React.FC<MeterProps> = ({ cents, locked }) => {
       <svg viewBox="0 0 260 158" width="260" height="158" style={{ display: 'block' }}>
         <defs>
           <radialGradient id="bgt-faceCream" cx="50%" cy="40%" r="80%">
-            <stop offset="0%" stopColor="#fbf2d2" /><stop offset="60%" stopColor="#efe2c0" /><stop offset="100%" stopColor="#d9c490" />
+            <stop offset="0%" stopColor={c0.face[0]} /><stop offset="60%" stopColor={c0.face[1]} /><stop offset="100%" stopColor={c0.face[2]} />
           </radialGradient>
           <linearGradient id="bgt-needleGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#c4422a" /><stop offset="100%" stopColor="#7a1d10" />
+            <stop offset="0%" stopColor={c0.needle[0]} /><stop offset="100%" stopColor={c0.needle[1]} />
           </linearGradient>
         </defs>
         <rect x="0" y="0" width="260" height="158" rx="6" fill="url(#bgt-faceCream)" />
-        <rect x="2" y="2" width="256" height="154" rx="5" fill="none" stroke="#caa052" strokeWidth="0.8" />
+        <rect x="2" y="2" width="256" height="154" rx="5" fill="none" stroke={c0.frame} strokeWidth="0.8" />
         <rect x="6" y="6" width="248" height="146" rx="3" fill="none" stroke="rgba(42,24,8,0.18)" strokeWidth="0.5" />
         <path d="M 41 122 A 89 89 0 0 1 219 122" fill="none" stroke="rgba(58,42,21,0.18)" strokeWidth="1" />
         <path d="M 121 33 A 89 89 0 0 1 139 33" fill="none" stroke="#6b8a3a" strokeWidth="3.5" strokeLinecap="round" opacity="0.55" />
         {ticks.map((t, i) => (
-          <line key={i} x1={t.x1} y1={t.y1} x2={t.x2} y2={t.y2} stroke="#2a1808" strokeWidth={t.major ? 1.2 : 0.6} opacity={t.major ? 0.85 : 0.55} />
+          <line key={i} x1={t.x1} y1={t.y1} x2={t.x2} y2={t.y2} stroke={c0.ink} strokeWidth={t.major ? 1.2 : 0.6} opacity={t.major ? 0.85 : 0.55} />
         ))}
         {[-50, -25, 0, 25, 50].map((c, i) => {
           const a = (c * ANGLE / 50) * Math.PI / 180;
-          return <text key={i} x={130 + Math.sin(a) * 82} y={122 - Math.cos(a) * 82 + 3} textAnchor="middle" fontFamily="JetBrains Mono, monospace" fontSize="7.5" fill="#3a2415" opacity="0.85">{c > 0 ? '+' + c : c}</text>;
+          return <text key={i} x={130 + Math.sin(a) * 82} y={122 - Math.cos(a) * 82 + 3} textAnchor="middle" fontFamily="JetBrains Mono, monospace" fontSize="7.5" fill={c0.ink2} opacity="0.85">{c > 0 ? '+' + c : c}</text>;
         })}
-        <text x="130" y="60" textAnchor="middle" fontFamily="DM Serif Display, serif" fontSize="9" fill="#3a2415" opacity="0.6" letterSpacing="2">CENTS</text>
-        <text x="34" y="118" textAnchor="middle" fontFamily="DM Serif Display, serif" fontSize="14" fill="#9b3221">♭</text>
-        <text x="226" y="118" textAnchor="middle" fontFamily="DM Serif Display, serif" fontSize="14" fill="#9b3221">♯</text>
-        <circle cx="130" cy="122" r="9" fill="#caa052" />
+        <text x="130" y="60" textAnchor="middle" fontFamily="DM Serif Display, serif" fontSize="9" fill={c0.ink2} opacity="0.6" letterSpacing="2">CENTS</text>
+        <text x="34" y="118" textAnchor="middle" fontFamily="DM Serif Display, serif" fontSize="14" fill={c0.accent}>♭</text>
+        <text x="226" y="118" textAnchor="middle" fontFamily="DM Serif Display, serif" fontSize="14" fill={c0.accent}>♯</text>
+        <circle cx="130" cy="122" r="9" fill={c0.frame} />
         <circle cx="130" cy="122" r="9" fill="none" stroke="rgba(0,0,0,0.4)" strokeWidth="0.6" />
-        <circle cx="128.5" cy="120" r="3.5" fill="rgba(255,230,160,0.7)" />
+        <circle cx="128.5" cy="120" r="3.5" fill={c0.shine} />
         <g style={{ transform: `rotate(${angle}deg)`, transformOrigin: '130px 122px', transition: 'transform .12s cubic-bezier(.2,.7,.3,1)' }}>
           <line x1="130" y1="122" x2="130" y2="28" stroke="url(#bgt-needleGrad)" strokeWidth="1.8" strokeLinecap="round" />
-          <polygon points="130,28 127,38 133,38" fill="#c4422a" />
-          <line x1="130" y1="122" x2="130" y2="138" stroke="#2a1808" strokeWidth="2" strokeLinecap="round" />
-          <circle cx="130" cy="122" r="2.5" fill="#2a1808" />
+          <polygon points="130,28 127,38 133,38" fill={c0.arrow} />
+          <line x1="130" y1="122" x2="130" y2="138" stroke={c0.ink} strokeWidth="2" strokeLinecap="round" />
+          <circle cx="130" cy="122" r="2.5" fill={c0.ink} />
         </g>
-        <text x="130" y="142" textAnchor="middle" fontFamily="DM Serif Display, serif" fontStyle="italic" fontSize="6.5" fill="#3a2415" opacity="0.5" letterSpacing="0.6">Bluegrass Tuner Co.</text>
+        <text x="130" y="142" textAnchor="middle" fontFamily="DM Serif Display, serif" fontStyle="italic" fontSize="6.5" fill={c0.ink2} opacity="0.5" letterSpacing="0.6">Bluegrass Tuner Co.</text>
         <circle cx="130" cy="14" r="3.5" fill={locked ? '#7aa44a' : 'rgba(42,24,8,0.18)'} style={{ transition: 'fill .15s' }} />
         {locked && <circle cx="130" cy="14" r="6" fill="none" stroke="#7aa44a" strokeOpacity="0.4" strokeWidth="1.2" />}
       </svg>
@@ -273,13 +281,14 @@ const DialMeter: React.FC<MeterProps> = ({ cents, locked, note, octave, freq }) 
 };
 
 // ── Big serif note readout (Heirloom / Studio) ──
-const NoteReadout: React.FC<{ note: string; octave: number; locked: boolean; tone: 'paper' | 'dark' }> = ({ note, octave, locked, tone }) => {
-  const ink = tone === 'paper' ? '#1a1108' : '#efe2c0';
-  const muted = tone === 'paper' ? 'rgba(26,17,8,0.55)' : 'rgba(239,226,192,0.55)';
-  const accent = locked ? '#6b8a3a' : (tone === 'paper' ? '#9b3221' : '#f0d57f');
+const NoteReadout: React.FC<{ note: string; octave: number; locked: boolean; tone: 'paper' | 'dark' | 'pearl' }> = ({ note, octave, locked, tone }) => {
+  const ink = tone === 'pearl' ? '#4a1d52' : tone === 'paper' ? '#1a1108' : '#efe2c0';
+  const muted = tone === 'pearl' ? 'rgba(74,29,82,0.55)' : tone === 'paper' ? 'rgba(26,17,8,0.55)' : 'rgba(239,226,192,0.55)';
+  const big = tone === 'pearl' ? '#a83478' : tone === 'dark' ? '#f0d57f' : ink;
+  const accent = locked ? '#6b8a3a' : (tone === 'pearl' ? '#b03a86' : tone === 'paper' ? '#9b3221' : '#f0d57f');
   return (
     <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 4 }}>
-      <span style={{ fontFamily: '"DM Serif Display", Georgia, serif', fontSize: tone === 'dark' ? 96 : 78, lineHeight: 0.88, color: locked ? accent : (tone === 'dark' ? '#f0d57f' : ink), letterSpacing: -2, transition: 'color .2s' }}>{note}</span>
+      <span style={{ fontFamily: '"DM Serif Display", Georgia, serif', fontSize: tone === 'dark' ? 96 : 78, lineHeight: 0.88, color: locked ? accent : big, letterSpacing: -2, transition: 'color .2s' }}>{note}</span>
       <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 16, color: muted }}>{octave}</span>
     </div>
   );
@@ -289,6 +298,7 @@ const STATUS: Record<Cabinet, { name: string; sub: string }> = {
   heirloom: { name: 'Heirloom', sub: 'Walnut · Cream Paper · VU Needle' },
   studio: { name: 'Studio', sub: 'Rosewood · Brass · Strobe Tape' },
   workshop: { name: 'Workshop', sub: 'Oak · Green Felt · Concentric Dial' },
+  happygirl: { name: 'Happy Girl', sub: 'Lavender · Pearl · Magenta Needle' },
 };
 
 // ──────────────────────────────────────────────────────────────
@@ -330,6 +340,34 @@ const TunerGauge: React.FC<TunerGaugeProps> = ({ noteData, cabinet = 'heirloom' 
           <BrassScrew size={10} style={{ position: 'absolute', top: 8, right: 8 }} />
           <BrassScrew size={10} style={{ position: 'absolute', bottom: 8, left: 8 }} />
           <BrassScrew size={10} style={{ position: 'absolute', bottom: 8, right: 8 }} />
+        </div>
+      </div>
+    );
+  }
+
+  if (cabinet === 'happygirl') {
+    return (
+      <div style={{ position: 'relative', width: 300, borderRadius: 22, background: 'linear-gradient(160deg, #5a2d72 0%, #3a1a52 100%)', padding: 12, boxShadow: '0 10px 30px rgba(60,20,80,0.45)' }}>
+        <TextureDefs />
+        <div style={{
+          position: 'relative', borderRadius: 14, padding: '18px 14px 16px',
+          background: 'linear-gradient(180deg, #fdf3fb 0%, #f1ddf3 60%, #e3c4ea 100%)',
+          boxShadow: 'inset 0 0 0 1px #d6a6cf, inset 0 0 0 4px #5a2d72, inset 0 0 30px rgba(140,70,150,0.15)',
+          overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12,
+        }}>
+          <PaperTexture intensity={0.35} />
+          <div style={{ transform: 'scale(0.95)', transformOrigin: 'center top' }}><NeedleMeter {...meter} variant="pearl" /></div>
+          {listening ? <div style={{ color: '#5a2d62' }}>{ListeningTag}</div> : <NoteReadout note={note} octave={octave} locked={locked} tone="pearl" />}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <CentsChip cents={cents} locked={locked} tone="pearl" />
+            <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: 'rgba(74,29,82,0.55)', letterSpacing: 1 }}>
+              {freq > 0 ? freq.toFixed(2) : '--'} Hz · TGT {target > 0 ? target.toFixed(2) : '--'}
+            </span>
+          </div>
+          {/* pearl corner studs */}
+          {[[8,8],[8,null],[null,8],[null,null]].map((_, i) => (
+            <div key={i} style={{ position: 'absolute', top: i < 2 ? 8 : undefined, bottom: i >= 2 ? 8 : undefined, left: i % 2 === 0 ? 8 : undefined, right: i % 2 === 1 ? 8 : undefined, width: 9, height: 9, borderRadius: 9, background: 'radial-gradient(circle at 35% 30%, #ffffff, #e9b8e0 60%, #b06aa6)' }} />
+          ))}
         </div>
       </div>
     );

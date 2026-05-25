@@ -53,7 +53,6 @@ const App: React.FC = () => {
   const [showCalculator, setShowCalculator] = useState(false);
   const [showTempoGame, setShowTempoGame] = useState(false);
   const [showTimeSigGame, setShowTimeSigGame] = useState(false);
-  const [showSkinSelector, setShowSkinSelector] = useState(false);
   const [showDrumMachine, setShowDrumMachine] = useState(false);
   const [showJamSimulator, setShowJamSimulator] = useState(false);
   
@@ -77,7 +76,8 @@ const App: React.FC = () => {
   // Tuner Cabinet (gauge face style) — persisted
   const [currentCabinet, setCurrentCabinet] = useState<Cabinet>(() => {
     const saved = typeof localStorage !== 'undefined' ? localStorage.getItem('bgt-cabinet') : null;
-    return (saved === 'studio' || saved === 'workshop' || saved === 'heirloom') ? saved : 'heirloom';
+    const valid: Cabinet[] = ['heirloom', 'studio', 'workshop', 'happygirl'];
+    return valid.includes(saved as Cabinet) ? (saved as Cabinet) : 'heirloom';
   });
   useEffect(() => {
     try { localStorage.setItem('bgt-cabinet', currentCabinet); } catch {}
@@ -425,84 +425,6 @@ const App: React.FC = () => {
       {showVital && <VitalSynth onClose={() => setShowVital(false)} />}
       {showPhasePlant && <PhasePlantSynth onClose={() => setShowPhasePlant(false)} />}
       
-      {/* Skin Selector Modal */}
-      {showSkinSelector && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-fade-in p-4">
-              <div className="bg-gray-900 border border-gray-700 rounded-2xl w-full max-w-sm shadow-2xl p-6">
-                  <div className="flex justify-between items-center mb-6">
-                      <h2 className="text-xl font-bold text-white">Select Skin</h2>
-                      <button onClick={() => setShowSkinSelector(false)} className="text-gray-500 hover:text-white">✕</button>
-                  </div>
-                  <div className="space-y-3">
-                      <button 
-                        onClick={() => { setCurrentSkin('original'); setShowSkinSelector(false); }}
-                        className={`w-full p-4 rounded-xl border-2 flex items-center justify-between font-bold transition-all ${currentSkin === 'original' ? 'border-neon-blue bg-gray-800' : 'border-gray-700 bg-gray-800/50 hover:bg-gray-700'}`}
-                      >
-                          <span>Original</span>
-                          <div className="flex gap-1">
-                              <div className="w-4 h-4 rounded-full bg-[#0f172a]"></div>
-                              <div className="w-4 h-4 rounded-full bg-[#00f3ff]"></div>
-                          </div>
-                      </button>
-                      <button 
-                        onClick={() => { setCurrentSkin('dark'); setShowSkinSelector(false); }}
-                        className={`w-full p-4 rounded-xl border-2 flex items-center justify-between font-bold transition-all ${currentSkin === 'dark' ? 'border-neon-blue bg-black' : 'border-gray-700 bg-black/50 hover:bg-gray-900'}`}
-                      >
-                          <span>Dark Mode</span>
-                          <div className="flex gap-1">
-                              <div className="w-4 h-4 rounded-full bg-[#000000]"></div>
-                              <div className="w-4 h-4 rounded-full bg-[#3b82f6]"></div>
-                          </div>
-                      </button>
-                      <button 
-                        onClick={() => { setCurrentSkin('happy'); setShowSkinSelector(false); }}
-                        className={`w-full p-4 rounded-xl border-2 flex items-center justify-between font-bold transition-all ${currentSkin === 'happy' ? 'border-purple-500 bg-purple-100' : 'border-purple-200 bg-purple-50 hover:bg-purple-100'}`}
-                      >
-                          <span className="text-purple-900">Happy Girl (Light)</span>
-                          <div className="flex gap-1">
-                              <div className="w-4 h-4 rounded-full bg-[#fae8ff]"></div>
-                              <div className="w-4 h-4 rounded-full bg-[#a855f7]"></div>
-                          </div>
-                      </button>
-                      <button 
-                        onClick={() => { setCurrentSkin('happy-dark'); setShowSkinSelector(false); }}
-                        className={`w-full p-4 rounded-xl border-2 flex items-center justify-between font-bold transition-all ${currentSkin === 'happy-dark' ? 'border-purple-500 bg-[#2e1065]' : 'border-purple-900 bg-[#1a0b2e] hover:bg-[#2e1065]'}`}
-                      >
-                          <span className="text-purple-100">Happy Girl (Dark)</span>
-                          <div className="flex gap-1">
-                              <div className="w-4 h-4 rounded-full bg-[#1a0b2e]"></div>
-                              <div className="w-4 h-4 rounded-full bg-[#d8b4fe]"></div>
-                          </div>
-                      </button>
-                  </div>
-
-                  {/* Tuner Cabinet (gauge face) */}
-                  <div className="mt-6 pt-5 border-t border-gray-800">
-                      <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Tuner Cabinet</h3>
-                      <div className="space-y-3">
-                          {(['heirloom', 'studio', 'workshop'] as Cabinet[]).map(cab => (
-                              <button
-                                key={cab}
-                                onClick={() => { setCurrentCabinet(cab); setShowSkinSelector(false); }}
-                                className={`w-full p-3 rounded-xl border-2 flex items-center justify-between transition-all ${currentCabinet === cab ? 'border-amber-500 bg-amber-950/40' : 'border-gray-700 bg-gray-800/50 hover:bg-gray-700'}`}
-                              >
-                                  <div className="flex flex-col items-start text-left">
-                                      <span className="font-bold text-white">{CABINETS[cab].name}</span>
-                                      <span className="text-[10px] text-gray-400 tracking-wide">{CABINETS[cab].sub}</span>
-                                  </div>
-                                  <div className="flex gap-1">
-                                      {cab === 'heirloom' && (<><div className="w-4 h-4 rounded-full bg-[#efe2c0]"></div><div className="w-4 h-4 rounded-full bg-[#7a1d10]"></div></>)}
-                                      {cab === 'studio' && (<><div className="w-4 h-4 rounded-full bg-[#2a0e08]"></div><div className="w-4 h-4 rounded-full bg-[#caa052]"></div></>)}
-                                      {cab === 'workshop' && (<><div className="w-4 h-4 rounded-full bg-[#243a1c]"></div><div className="w-4 h-4 rounded-full bg-[#caa052]"></div></>)}
-                                  </div>
-                              </button>
-                          ))}
-                      </div>
-                  </div>
-              </div>
-          </div>
-      )}
-
       {/* --- VINTAGE CABINET TUNER (mobile-first) --- */}
       <CabinetTuner
         cabinet={currentCabinet}
@@ -524,7 +446,7 @@ const App: React.FC = () => {
         onToggleEar={() => setIsTuneByEar(!isTuneByEar)}
         onInstall={handleInstallClick}
         onOpenMenu={(type, e) => toggleDropdown(e, type)}
-        onOpenCabinets={() => setShowSkinSelector(true)}
+        onSelectCabinet={setCurrentCabinet}
       />
 
       {/* Hidden dB meter sink — the audio loop writes here; kept off the cabinet UI */}
@@ -556,7 +478,6 @@ const App: React.FC = () => {
                       <DropdownItem onClick={() => openModal(setShowChordCreator)} label="Chord Creator" />
                       <DropdownItem onClick={() => openModal(setShowMetronome)} label="Metronome" />
                       <DropdownItem onClick={() => openModal(setShowCalculator)} label="Calculator" />
-                      <DropdownItem onClick={() => openModal(setShowSkinSelector)} label="Skins Mode 🎨" />
                   </>
               )}
           </FloatingDropdown>

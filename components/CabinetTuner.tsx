@@ -1,6 +1,6 @@
 import React from 'react';
 import { NoteData, TuningDefinition } from '../types';
-import TunerGauge, { Cabinet } from './TunerGauge';
+import TunerGauge, { Cabinet, CABINETS } from './TunerGauge';
 
 // ──────────────────────────────────────────────────────────────
 // Mobile-first vintage "cabinet" tuner screen. Wraps the existing
@@ -32,7 +32,7 @@ interface CabinetTunerProps {
   onToggleEar: () => void;
   onInstall: () => void;
   onOpenMenu: (type: 'charts' | 'tools', e: React.MouseEvent<HTMLButtonElement>) => void;
-  onOpenCabinets: () => void;
+  onSelectCabinet: (c: Cabinet) => void;
 }
 
 // Palette per cabinet for the full-screen surface + vintage chrome.
@@ -57,6 +57,20 @@ const SKIN: Record<Cabinet, {
     ink: '#efe2c0', muted: 'rgba(239,226,192,0.55)', accent: '#caa052',
     line: 'rgba(239,226,192,0.16)', panel: 'rgba(0,0,0,0.22)',
   },
+  happygirl: {
+    tone: 'paper',
+    pageBg: 'radial-gradient(120% 90% at 50% 0%, #f7e7f9 0%, #ecd2ee 55%, #dab6e2 100%)',
+    ink: '#4a1d52', muted: 'rgba(74,29,82,0.55)', accent: '#b03a86',
+    line: 'rgba(74,29,82,0.18)', panel: 'rgba(255,250,255,0.4)',
+  },
+};
+
+// Swatch colors per cabinet for the picker.
+const CABINET_SWATCH: Record<Cabinet, [string, string]> = {
+  heirloom: ['#efe2c0', '#7a1d10'],
+  studio: ['#2a0e08', '#caa052'],
+  workshop: ['#243a1c', '#caa052'],
+  happygirl: ['#e3c4ea', '#b03a86'],
 };
 
 const SERIF = '"DM Serif Display", Georgia, serif';
@@ -234,9 +248,52 @@ const TuningSheet: React.FC<{
   </div>
 );
 
+// Cabinet picker — same bottom-sheet style as the tuning list, tone-matched.
+const CabinetSheet: React.FC<{
+  current: Cabinet; onSelect: (c: Cabinet) => void; onClose: () => void; s: typeof SKIN[Cabinet];
+}> = ({ current, onSelect, onClose, s }) => (
+  <div onClick={onClose} style={{
+    position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.55)',
+    backdropFilter: 'blur(2px)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: 14,
+  }}>
+    <div onClick={(e) => e.stopPropagation()} style={{
+      width: '100%', maxWidth: 420, maxHeight: '70vh', overflowY: 'auto', borderRadius: 18, padding: '12px 8px 18px',
+      background: s.tone === 'paper' ? 'linear-gradient(180deg,#f6ecca,#e7d6ac)' : 'linear-gradient(180deg,#2e1a0c,#180c05)',
+      boxShadow: `0 -10px 44px rgba(0,0,0,0.55), inset 0 0 0 1px ${s.accent}`,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '2px 10px 10px' }}>
+        <span style={{ fontFamily: SERIF, fontSize: 18, color: s.ink }}>Cabinet</span>
+        <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: s.muted, fontSize: 18, cursor: 'pointer', lineHeight: 1 }}>✕</button>
+      </div>
+      {(Object.keys(CABINETS) as Cabinet[]).map((cab) => {
+        const active = cab === current;
+        const sw = CABINET_SWATCH[cab];
+        return (
+          <button key={cab} onClick={() => { onSelect(cab); onClose(); }} style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%',
+            background: active ? (s.tone === 'paper' ? 'rgba(155,50,33,0.10)' : 'rgba(202,160,82,0.14)') : 'transparent',
+            border: 'none', borderRadius: 8, padding: '11px 12px', cursor: 'pointer', marginBottom: 2, gap: 10,
+          }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 1 }}>
+              <span style={{ fontFamily: SERIF, fontSize: 16, color: active ? s.accent : s.ink }}>{CABINETS[cab].name}</span>
+              <span style={{ fontFamily: MONO, fontSize: 8.5, color: s.muted, letterSpacing: 0.6, textTransform: 'uppercase' }}>{CABINETS[cab].sub}</span>
+            </div>
+            <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+              <span style={{ width: 16, height: 16, borderRadius: 16, background: sw[0], boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.2)' }} />
+              <span style={{ width: 16, height: 16, borderRadius: 16, background: sw[1], boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.2)' }} />
+              {active && <span style={{ color: s.accent, fontSize: 11, marginLeft: 4 }}>●</span>}
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  </div>
+);
+
 const CabinetTuner: React.FC<CabinetTunerProps> = (p) => {
   const s = SKIN[p.cabinet];
   const [tuningOpen, setTuningOpen] = React.useState(false);
+  const [cabinetOpen, setCabinetOpen] = React.useState(false);
   return (
     <div style={{
       minHeight: '100dvh', width: '100%', background: s.pageBg,
@@ -244,7 +301,7 @@ const CabinetTuner: React.FC<CabinetTunerProps> = (p) => {
       padding: '14px 16px 24px', boxSizing: 'border-box', overflowX: 'hidden',
     }}>
       <div style={{ width: '100%', maxWidth: 440, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
-        <TopBar s={s} deferredPrompt={p.deferredPrompt} onInstall={p.onInstall} onOpenMenu={p.onOpenMenu} onOpenCabinets={p.onOpenCabinets} />
+        <TopBar s={s} deferredPrompt={p.deferredPrompt} onInstall={p.onInstall} onOpenMenu={p.onOpenMenu} onOpenCabinets={() => setCabinetOpen(true)} />
         <Wordmark s={s} />
         <InstrumentTabs instruments={p.instruments} value={p.instrument} onChange={p.onInstrument} s={s} />
         <TunerGauge noteData={p.noteData} cabinet={p.cabinet} />
@@ -259,6 +316,11 @@ const CabinetTuner: React.FC<CabinetTunerProps> = (p) => {
         <TuningSheet
           tunings={p.tuningKeys} current={p.tuningName}
           onSelect={p.onSelectTuning} onClose={() => setTuningOpen(false)} s={s}
+        />
+      )}
+      {cabinetOpen && (
+        <CabinetSheet
+          current={p.cabinet} onSelect={p.onSelectCabinet} onClose={() => setCabinetOpen(false)} s={s}
         />
       )}
     </div>
