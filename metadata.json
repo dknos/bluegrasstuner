@@ -1,0 +1,7 @@
+{
+  "name": "Copy of Bluegrass Tuner v0.3.9.5 PWA",
+  "description": "A professional-grade instrument tuner (Guitar, Bass, Banjo, Mandolin, Violin, Ukulele) featuring real-time frequency analysis and AI-powered imagery.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}

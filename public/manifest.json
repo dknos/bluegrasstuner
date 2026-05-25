@@ -1,0 +1,21 @@
+{
+  "name": "Bluegrass Tuner Pro",
+  "short_name": "Tuner",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "description": "Professional instrument tuner and synth workstation.",
+  "icons": [
+    {
+      "src": "https://img.icons8.com/fluency/192/banjo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://img.icons8.com/fluency/512/banjo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
