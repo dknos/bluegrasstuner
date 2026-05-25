@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { SynthShell, Knob, KnobRow, Keys, Rocker, Engrave, PANEL } from './synthkit';
 
 interface MatriarchSynthProps {
   onClose: () => void;
@@ -223,7 +224,7 @@ class MatriarchEngine {
 }
 
 // --- KNOB COMPONENT ---
-const Knob: React.FC<{ 
+const LegacyKnob: React.FC<{
     label: string; 
     value: number; 
     min: number; 
@@ -429,141 +430,48 @@ const MatriarchSynth: React.FC<MatriarchSynthProps> = ({ onClose }) => {
         return () => clearInterval(interval);
     }, [arpMode, activeNotes]);
 
+    const toggle = (on: boolean, label: string, fn: () => void) => (
+        <button onClick={fn} style={{
+            padding: '7px 14px', borderRadius: 999, cursor: 'pointer', fontFamily: '"JetBrains Mono", monospace', fontSize: 10, letterSpacing: 1, textTransform: 'uppercase',
+            border: `1px solid ${on ? PANEL.brass : PANEL.line}`, background: on ? PANEL.brass : 'transparent', color: on ? '#1a0d04' : PANEL.inkMute,
+        }}>{label}</button>
+    );
+
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-0 md:p-4 animate-fade-in font-sans touch-none">
-            {/* Added padding for close button overlap fix */}
-            <div className="relative w-full max-w-6xl h-full md:h-auto md:aspect-[16/9] bg-[#1a1a1a] rounded-xl shadow-2xl overflow-hidden border-4 border-[#8B4513] flex flex-col pt-14 md:pt-0">
-                
-                {/* --- HEADER --- */}
-                <div className="min-h-16 bg-[#111] flex flex-wrap items-center justify-between px-6 border-b border-gray-800 z-50 relative gap-2 pl-14 md:pl-6 py-2">
-                    <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-full border-2 border-orange-500 flex items-center justify-center shadow-[0_0_15px_orange]">
-                            <div className="w-6 h-6 bg-orange-500 rounded-full animate-pulse"></div>
-                        </div>
-                        <h1 className="text-xl md:text-2xl font-black tracking-widest text-white uppercase" style={{ fontFamily: 'serif' }}>MATRIARCH</h1>
-                    </div>
-                    
-                    <div className="flex gap-4 items-center">
-                        <button 
-                            onClick={() => setIsHold(!isHold)}
-                            className={`px-3 py-1 rounded text-xs font-bold uppercase tracking-wider border transition-all ${isHold ? 'bg-yellow-600 border-yellow-400 text-white shadow-[0_0_10px_yellow] animate-pulse' : 'bg-gray-800 border-gray-600 text-gray-400'}`}
-                        >
-                            HOLD
-                        </button>
-                        <button 
-                            onClick={() => setPatchMode(!patchMode)}
-                            className={`px-4 py-2 rounded font-bold uppercase text-xs tracking-wider border ${patchMode ? 'bg-pink-900 border-pink-500 text-pink-100 shadow-[0_0_10px_#db2777]' : 'bg-gray-800 border-gray-600 text-gray-400'}`}
-                        >
-                            {patchMode ? 'Hide Patch' : 'Patch Bay'}
-                        </button>
-                    </div>
-                </div>
-
-                {/* --- MAIN PANEL (Modules) --- */}
-                <div className="flex-1 bg-[#222] relative flex flex-col md:flex-row overflow-y-auto md:overflow-hidden">
-                    
-                    {/* Module 1: Modulation */}
-                    <div className="flex-1 p-4 border-r border-gray-800 flex flex-col items-center gap-6 bg-gradient-to-b from-[#2a2a2a] to-[#222]">
-                        <h3 className="text-gray-500 font-bold text-xs uppercase tracking-widest mb-2">Modulation</h3>
-                        <Knob label="Rate" value={lfoRate} min={0.1} max={20} onChange={setLfoRate} color="border-pink-500" />
-                        <div className="w-full h-px bg-gray-700 my-2"></div>
-                        <div className="w-20 h-20 bg-black rounded border border-gray-600 relative overflow-hidden">
-                            <div className="absolute inset-0 opacity-30 bg-pink-900 animate-pulse"></div>
-                            <svg className="w-full h-full" preserveAspectRatio="none">
-                                <path d="M0,40 Q20,0 40,40 T80,40" stroke="pink" fill="none" strokeWidth="2" />
-                            </svg>
-                        </div>
-                    </div>
-
-                    {/* Module 2: Oscillators */}
-                    <div className="flex-[2] p-4 border-r border-gray-800 flex flex-col bg-[#252525]">
-                        <h3 className="text-gray-500 font-bold text-xs uppercase tracking-widest mb-4 text-center">Oscillators</h3>
-                        <div className="flex justify-around">
-                            <div className="flex flex-col items-center gap-4">
-                                <span className="text-[10px] text-gray-400">VCO 1</span>
-                                <Knob label="Octave" value={vco1Octave} min={1} max={4} step={1} onChange={setVco1Octave} color="border-red-500" />
-                                <Knob label="Wave" value={vco1WaveIdx} min={0} max={3} step={1} onChange={setVco1WaveIdx} color="border-red-500" displayValue={WAVEFORMS[vco1WaveIdx]} />
-                            </div>
-                            <div className="flex flex-col items-center gap-4">
-                                <span className="text-[10px] text-gray-400">VCO 2</span>
-                                <Knob label="Tune" value={vco2Freq} min={-12} max={12} step={1} onChange={setVco2Freq} color="border-red-500" />
-                                <Knob label="Wave" value={vco2WaveIdx} min={0} max={3} step={1} onChange={setVco2WaveIdx} color="border-red-500" displayValue={WAVEFORMS[vco2WaveIdx]} />
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Module 3: Filter (Main) */}
-                    <div className="flex-[1.5] p-4 border-r border-gray-800 flex flex-col items-center gap-6 bg-[#222]">
-                        <h3 className="text-gray-500 font-bold text-xs uppercase tracking-widest mb-2">Stereo Filter</h3>
-                        <div className="relative">
-                            <Knob label="Cutoff" value={cutoff} min={50} max={10000} onChange={setCutoff} color="border-white shadow-[0_0_20px_rgba(255,255,255,0.2)]" />
-                        </div>
-                        <Knob label="Resonance" value={res} min={0} max={30} onChange={setRes} color="border-white" />
-                        <div className="flex gap-2 mt-4">
-                            <button className="w-8 h-8 rounded bg-gray-800 border border-gray-600 text-[10px] text-gray-300">LP</button>
-                            <button className="w-8 h-8 rounded bg-gray-800 border border-gray-600 text-[10px] text-gray-300">HP</button>
-                        </div>
-                    </div>
-
-                    {/* Module 4: Delay / Output */}
-                    <div className="flex-1 p-4 flex flex-col items-center gap-6 bg-gradient-to-b from-[#2a2a2a] to-[#222]">
-                        <h3 className="text-gray-500 font-bold text-xs uppercase tracking-widest mb-2">Analog Delay</h3>
-                        <Knob label="Time" value={delayTime} min={0.05} max={1.0} onChange={setDelayTime} color="border-blue-400" />
-                        <Knob label="Mix" value={delayMix} min={0} max={1} onChange={setDelayMix} color="border-blue-400" />
-                        
-                        <div className="mt-auto w-full">
-                            <h3 className="text-gray-500 font-bold text-xs uppercase tracking-widest mb-2 text-center">Output</h3>
-                            <div className="w-full h-3 bg-gray-900 rounded-full overflow-hidden border border-gray-700">
-                                <div className="h-full bg-gradient-to-r from-green-500 to-red-500 w-[70%] animate-pulse"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* XY PAD */}
-                    <div className="absolute bottom-4 right-4 w-32 h-32 bg-black border-2 border-gray-600 rounded opacity-80 md:block hidden">
-                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,_rgba(255,255,255,0.1),_transparent)]"></div>
-                        <div className="text-[10px] text-gray-500 absolute top-1 left-1">XY PAD</div>
-                        <div className="absolute w-4 h-4 bg-orange-500 rounded-full blur-sm top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 shadow-[0_0_10px_orange]"></div>
-                    </div>
-
-                    {/* Patch Overlay */}
-                    {patchMode && (
-                        <div className="absolute inset-0 bg-black/80 backdrop-blur-sm z-40 flex items-center justify-center p-8 animate-fade-in patchbay-container">
-                            <svg className="absolute inset-0 w-full h-full pointer-events-none z-20 opacity-70">
-                                <path d="M 100 100 Q 200 300 400 150" stroke="pink" strokeWidth="4" fill="none" strokeLinecap="round" className="drop-shadow-lg" />
-                                <path d="M 600 200 Q 700 400 800 100" stroke="cyan" strokeWidth="4" fill="none" strokeLinecap="round" className="drop-shadow-lg" />
-                            </svg>
-                            <div className="text-white text-center">
-                                <h2 className="text-xl font-bold uppercase mb-4">Patch Bay</h2>
-                                <p className="text-sm text-gray-400">Virtual cabling active. Visual simulation only.</p>
-                            </div>
-                        </div>
-                    )}
-                </div>
-
-                {/* --- KEYBOARD & PERFORMANCE --- */}
-                <div className="flex-none bg-[#1a1a1a] p-2 border-t-4 border-[#8B4513]">
-                    <div className="flex justify-between items-center px-4 mb-2">
-                        <div className="flex gap-2">
-                            <button 
-                                onClick={() => setArpMode(!arpMode)}
-                                className={`px-3 py-1 rounded text-xs font-bold uppercase tracking-wider ${arpMode ? 'bg-orange-600 text-white animate-pulse' : 'bg-gray-800 text-gray-400'}`}
-                            >
-                                Arp / Seq
-                            </button>
-                        </div>
-                        <div className="text-xs text-gray-500 font-mono">PARAPHONIC MODE</div>
-                    </div>
-                    
-                    <SynthKeyboard 
-                        activeNotes={activeNotes} 
-                        onNoteOn={handleNoteOn} 
-                        onNoteOff={handleNoteOff}
-                    />
-                </div>
-
+        <SynthShell name="Matriarch" tag="Paraphonic · Semi-Modular · Stereo Delay" onClose={onClose} accent={PANEL.brass}>
+            <div style={{ display: 'flex', gap: 8 }}>
+                {toggle(isHold, 'Hold', () => setIsHold(!isHold))}
+                {toggle(arpMode, 'Arp', () => setArpMode(!arpMode))}
             </div>
-        </div>
+
+            <Engrave>Oscillator 1</Engrave>
+            <KnobRow>
+                <Knob label="Octave" value={vco1Octave} min={1} max={4} step={1} onChange={setVco1Octave} />
+                <Rocker label="Wave" options={['Tri', 'Saw', 'Sqr', 'Sin']} value={vco1WaveIdx} onChange={setVco1WaveIdx} />
+            </KnobRow>
+
+            <Engrave>Oscillator 2</Engrave>
+            <KnobRow>
+                <Knob label="Tune" value={vco2Freq} min={-12} max={12} step={1} onChange={setVco2Freq} format={(v) => `${v > 0 ? '+' : ''}${v}`} />
+                <Rocker label="Wave" options={['Tri', 'Saw', 'Sqr', 'Sin']} value={vco2WaveIdx} onChange={setVco2WaveIdx} />
+            </KnobRow>
+
+            <Engrave>Stereo Filter</Engrave>
+            <KnobRow>
+                <Knob label="Cutoff" value={cutoff} min={50} max={10000} log onChange={setCutoff} format={(v) => `${Math.round(v)}`} size={70} />
+                <Knob label="Resonance" value={res} min={0} max={30} onChange={setRes} size={70} />
+            </KnobRow>
+
+            <Engrave>Analog Delay · Mod</Engrave>
+            <KnobRow>
+                <Knob label="Time" value={delayTime} min={0.05} max={1} step={0.01} onChange={setDelayTime} format={(v) => `${(v * 1000).toFixed(0)}ms`} />
+                <Knob label="Mix" value={delayMix} min={0} max={1} step={0.01} onChange={setDelayMix} />
+                <Knob label="LFO Rate" value={lfoRate} min={0.1} max={20} step={0.1} onChange={setLfoRate} format={(v) => `${v.toFixed(1)}Hz`} />
+            </KnobRow>
+
+            <Engrave>Keyboard · Paraphonic</Engrave>
+            <Keys octaves={2} startMidi={48} activeNotes={activeNotes} onNoteOn={handleNoteOn} onNoteOff={handleNoteOff} />
+        </SynthShell>
     );
 };
 
