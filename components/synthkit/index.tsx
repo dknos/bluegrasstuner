@@ -181,8 +181,8 @@ export const Knob: React.FC<{
   );
 };
 
-// ── Scope ── recessed phosphor oscilloscope fed by an AnalyserNode ──────────
-export const Scope: React.FC<{ analyser: AnalyserNode | null; height?: number; color?: string }> = ({ analyser, height = 96, color = PANEL.phosphor }) => {
+// ── Scope ── recessed phosphor display (waveform or spectrum) ───────────────
+export const Scope: React.FC<{ analyser: AnalyserNode | null; height?: number; color?: string; mode?: 'wave' | 'bars' }> = ({ analyser, height = 96, color = PANEL.phosphor, mode = 'wave' }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     let raf = 0;
@@ -193,19 +193,29 @@ export const Scope: React.FC<{ analyser: AnalyserNode | null; height?: number; c
         if (c) {
           const w = cv.width, h = cv.height;
           c.fillStyle = PANEL.screen; c.fillRect(0, 0, w, h);
-          // grid
           c.strokeStyle = 'rgba(143,209,122,0.10)'; c.lineWidth = 1;
           for (let i = 1; i < 6; i++) { c.beginPath(); c.moveTo((w / 6) * i, 0); c.lineTo((w / 6) * i, h); c.stroke(); }
           c.beginPath(); c.moveTo(0, h / 2); c.lineTo(w, h / 2); c.stroke();
           if (analyser) {
             const n = analyser.frequencyBinCount;
             const data = new Uint8Array(n);
-            analyser.getByteTimeDomainData(data);
-            c.lineWidth = 2; c.strokeStyle = color; c.shadowColor = color; c.shadowBlur = 6;
-            c.beginPath();
-            const sw = w / n; let x = 0;
-            for (let i = 0; i < n; i++) { const y = (data[i] / 128) * h / 2; i === 0 ? c.moveTo(x, y) : c.lineTo(x, y); x += sw; }
-            c.stroke(); c.shadowBlur = 0;
+            if (mode === 'bars') {
+              analyser.getByteFrequencyData(data);
+              const bars = Math.min(48, n); const bw = w / bars;
+              c.shadowColor = color; c.shadowBlur = 5;
+              for (let i = 0; i < bars; i++) {
+                const v = data[Math.floor(i * n / bars)] / 255;
+                c.fillStyle = color; c.fillRect(i * bw + 1, h - v * h, bw - 2, v * h);
+              }
+              c.shadowBlur = 0;
+            } else {
+              analyser.getByteTimeDomainData(data);
+              c.lineWidth = 2; c.strokeStyle = color; c.shadowColor = color; c.shadowBlur = 6;
+              c.beginPath();
+              const sw = w / n; let x = 0;
+              for (let i = 0; i < n; i++) { const y = (data[i] / 128) * h / 2; i === 0 ? c.moveTo(x, y) : c.lineTo(x, y); x += sw; }
+              c.stroke(); c.shadowBlur = 0;
+            }
           }
         }
       }
@@ -213,13 +223,46 @@ export const Scope: React.FC<{ analyser: AnalyserNode | null; height?: number; c
     };
     draw();
     return () => cancelAnimationFrame(raf);
-  }, [analyser, color]);
+  }, [analyser, color, mode]);
   return (
     <div style={{
       borderRadius: 8, overflow: 'hidden', padding: 4,
       background: '#070907', boxShadow: `inset 0 2px 10px rgba(0,0,0,0.9), 0 0 0 1px ${PANEL.brassDark}, 0 0 0 3px rgba(0,0,0,0.5)`,
     }}>
       <canvas ref={canvasRef} width={600} height={height * 2} style={{ width: '100%', height, display: 'block', borderRadius: 5 }} />
+    </div>
+  );
+};
+
+// ── Fader ── vertical metal slider, pointer-drag ───────────────────────────
+export const Fader: React.FC<{
+  label?: string; value: number; min?: number; max?: number; onChange: (v: number) => void; height?: number; accent?: string;
+}> = ({ label, value, min = 0, max = 1, onChange, height = 130, accent = PANEL.brass }) => {
+  const norm = Math.max(0, Math.min(1, (value - min) / (max - min)));
+  const ref = useRef<HTMLDivElement>(null);
+  const set = (clientY: number) => {
+    const el = ref.current; if (!el) return;
+    const r = el.getBoundingClientRect();
+    const n = 1 - (clientY - r.top) / r.height;
+    onChange(min + Math.max(0, Math.min(1, n)) * (max - min));
+  };
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, flex: 1, minWidth: 0 }}>
+      <div ref={ref}
+        onPointerDown={(e) => { (e.target as Element).setPointerCapture?.(e.pointerId); set(e.clientY); }}
+        onPointerMove={(e) => { if (e.buttons) set(e.clientY); }}
+        style={{ position: 'relative', width: 18, height, borderRadius: 9, cursor: 'ns-resize', touchAction: 'none',
+          background: '#100c08', boxShadow: `inset 0 0 0 1px ${PANEL.line}, inset 0 2px 6px rgba(0,0,0,0.8)` }}>
+        {/* fill */}
+        <div style={{ position: 'absolute', left: 2, right: 2, bottom: 2, height: `calc(${norm * 100}% - 4px)`, borderRadius: 7,
+          background: `linear-gradient(180deg, ${accent}, ${PANEL.brassDark})`, opacity: 0.85 }} />
+        {/* cap */}
+        <div style={{ position: 'absolute', left: -3, right: -3, height: 12, borderRadius: 4, bottom: `calc(${norm * 100}% - 6px)`,
+          background: 'linear-gradient(180deg,#4a443c,#1a1510)', boxShadow: '0 1px 3px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.15)' }}>
+          <div style={{ position: 'absolute', top: '50%', left: 3, right: 3, height: 1, background: accent }} />
+        </div>
+      </div>
+      {label && <span style={{ fontFamily: MONO, fontSize: 8, color: PANEL.inkMute, letterSpacing: 0.5 }}>{label}</span>}
     </div>
   );
 };
