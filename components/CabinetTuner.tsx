@@ -84,8 +84,10 @@ const Wordmark: React.FC<{ s: typeof SKIN[Cabinet] }> = ({ s }) => (
       </div>
       <Asterism color={s.accent} size={10} />
     </div>
-    <div style={{ fontFamily: MONO, fontSize: 8.5, color: s.muted, letterSpacing: 3, textTransform: 'uppercase' }}>
-      · Est. MMXXV · Studio Mk II ·
+    <div style={{ fontFamily: MONO, fontSize: 8.5, color: s.muted, letterSpacing: 1.5, textTransform: 'uppercase' }}>
+      Made in St. Louis, MO ·{' '}
+      <a href="https://github.com/dknos" target="_blank" rel="noopener noreferrer"
+        style={{ color: s.accent, textDecoration: 'none' }}>@DKNOS</a>
     </div>
   </div>
 );
