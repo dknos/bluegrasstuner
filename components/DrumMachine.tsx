@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Keys, PANEL } from './synthkit';
 
 interface DrumMachineProps {
   onClose: () => void;
@@ -505,175 +506,109 @@ const DrumMachine: React.FC<DrumMachineProps> = ({ onClose }) => {
       )
   };
 
+  const ink = PANEL.ink, brass = PANEL.brass, line = PANEL.line, mute = PANEL.inkMute;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 p-0 md:p-6 animate-fade-in font-sans select-none touch-manipulation">
-      <div className="bg-[#1a1c23] border border-gray-700 md:rounded-xl w-full h-full md:max-w-6xl md:h-auto md:max-h-[90vh] flex flex-col shadow-2xl relative overflow-hidden">
-        
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-0 md:p-6 animate-fade-in select-none touch-manipulation" style={{ background: 'rgba(8,5,3,0.85)', backdropFilter: 'blur(3px)', fontFamily: '"JetBrains Mono", monospace' }}>
+      <div className="w-full h-full md:max-w-3xl md:h-auto md:max-h-[92vh] flex flex-col relative overflow-hidden md:rounded-2xl" style={{ background: 'linear-gradient(180deg,#4a2c12,#2a1808)', padding: '0 9px' }}>
+        <div className="flex flex-col flex-1 my-0 md:my-[9px] overflow-hidden md:rounded-[10px]" style={{ background: 'linear-gradient(180deg,#2c2620,#1a1612)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06), inset 0 0 0 1px rgba(0,0,0,0.5)' }}>
+
         {/* HEADER */}
-        <div className="flex-none h-16 p-2 bg-[#121418] border-b border-gray-800 flex items-center justify-between gap-3 z-50 pr-4 relative shadow-lg">
-            <div className="flex items-center gap-2">
-                <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center shadow-lg">
-                    <span className="text-xl">🎹</span>
-                </div>
-                <div className="hidden sm:block">
-                    <h2 className="text-lg font-bold text-white uppercase">Groovebox</h2>
+        <div className="flex-none flex items-center justify-between gap-3 px-4 py-3" style={{ borderBottom: `1px solid ${line}`, background: 'linear-gradient(180deg, rgba(0,0,0,0.25), rgba(0,0,0,0))' }}>
+            <div className="flex items-center gap-3">
+                <div>
+                    <div style={{ fontFamily: '"DM Serif Display", serif', fontSize: 22, color: ink, lineHeight: 1 }}>Groovebox</div>
+                    <div style={{ fontSize: 8.5, color: brass, letterSpacing: 2, textTransform: 'uppercase' }}>16-Step · Drums · Keys</div>
                 </div>
                 {viewMode === 'KEYS' && (
-                    <button 
-                        onClick={() => setIsHold(!isHold)}
-                        className={`ml-4 px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${isHold ? 'bg-yellow-600 border-yellow-400 text-white shadow-[0_0_10px_yellow] animate-pulse' : 'bg-gray-800 border-gray-600 text-gray-400'}`}
-                    >
-                        HOLD
-                    </button>
+                    <button onClick={() => setIsHold(!isHold)} style={{ marginLeft: 10, padding: '6px 12px', borderRadius: 999, fontSize: 10, letterSpacing: 1, cursor: 'pointer', border: `1px solid ${isHold ? brass : line}`, background: isHold ? brass : 'transparent', color: isHold ? '#1a0d04' : mute }}>HOLD</button>
                 )}
             </div>
-
-            {/* Redesigned Close Button for High Visibility */}
-            <button 
-                onClick={onClose} 
-                className="w-12 h-12 flex items-center justify-center bg-red-600 hover:bg-red-500 rounded-xl text-white font-bold text-xl shadow-lg border-2 border-red-400"
-            >
-                ✕
-            </button>
+            <button onClick={onClose} aria-label="Close" style={{ width: 34, height: 34, borderRadius: 9, cursor: 'pointer', background: 'rgba(0,0,0,0.3)', border: `1px solid ${line}`, color: mute, fontSize: 16 }}>✕</button>
         </div>
 
-        {/* MAIN WORKSPACE (Scrollable, Middle) */}
-        <div className="flex-1 flex flex-col md:flex-row overflow-hidden pb-[72px] md:pb-0">
-            
-            {/* SIDEBAR */}
-            <div className="flex-none md:w-48 bg-[#0f1115] border-b md:border-b-0 md:border-r border-gray-800 flex flex-row md:flex-col overflow-x-auto md:overflow-y-auto h-12 md:h-auto no-scrollbar">
+        {/* MAIN WORKSPACE */}
+        <div className="flex-1 flex flex-col overflow-y-auto pb-[80px]">
+
+            {/* TRACK TABS */}
+            <div className="flex-none flex gap-2 px-3 py-2" style={{ borderBottom: `1px solid ${line}` }}>
                 {tracks.map(track => (
-                    <div 
-                        key={track.id}
-                        onClick={() => {
-                            setSelectedTrackId(track.id);
-                            setViewMode(track.type === 'DRUM' ? 'DRUMS' : 'KEYS');
-                        }}
-                        className={`flex-none w-24 md:w-full p-2 md:p-3 border-r md:border-r-0 md:border-b border-gray-800 cursor-pointer relative flex items-center justify-center md:justify-start ${selectedTrackId === track.id ? 'bg-[#1e222b]' : 'hover:bg-[#161920]'}`}
-                    >
-                        <span className={`text-xs font-bold uppercase truncate ${selectedTrackId === track.id ? 'text-white' : 'text-gray-400'}`}>{track.name}</span>
-                    </div>
+                    <button key={track.id}
+                        onClick={() => { setSelectedTrackId(track.id); setViewMode(track.type === 'DRUM' ? 'DRUMS' : 'KEYS'); }}
+                        style={{ padding: '6px 16px', borderRadius: 8, cursor: 'pointer', fontSize: 10, letterSpacing: 1, textTransform: 'uppercase',
+                            border: `1px solid ${selectedTrackId === track.id ? brass : line}`, background: selectedTrackId === track.id ? brass : '#181410', color: selectedTrackId === track.id ? '#1a0d04' : mute }}>
+                        {track.name}
+                    </button>
                 ))}
             </div>
 
-            {/* CONTENT */}
-            <div className="flex-1 flex flex-col bg-[#16181d] min-h-0 overflow-y-auto">
-                {/* SEQUENCER */}
-                <div className="flex-none h-20 border-b border-gray-800 bg-[#131519] p-2 overflow-x-auto">
-                    <div className="flex gap-1 h-full min-w-max">
-                         {[...Array(16)].map((_, stepIdx) => {
-                             const isActive = currentStep === stepIdx;
-                             const hasNote = ((activeTrack.steps[stepIdx] as unknown as number[]) || []).length > 0;
-                             return (
-                                 <div key={stepIdx} className="w-6 md:w-8 flex flex-col gap-1">
-                                     <div className={`h-1 rounded-full mb-1 ${isActive ? 'bg-green-400' : 'bg-gray-800'}`}></div>
-                                     <button 
-                                        onClick={() => toggleStep(stepIdx, 0)} 
-                                        className={`flex-1 rounded border ${hasNote ? 'bg-indigo-500 border-indigo-400' : 'bg-[#1a1c23] border-gray-800'}`}
-                                     ></button>
-                                 </div>
-                             )
-                         })}
-                    </div>
+            {/* SEQUENCER */}
+            <div className="flex-none px-3 py-3" style={{ borderBottom: `1px solid ${line}` }}>
+                <div style={{ fontSize: 8.5, color: mute, letterSpacing: 2.5, textTransform: 'uppercase', marginBottom: 8 }}>Sequencer</div>
+                <div className="flex gap-1 overflow-x-auto">
+                    {[...Array(16)].map((_, stepIdx) => {
+                        const isActive = currentStep === stepIdx;
+                        const hasNote = ((activeTrack.steps[stepIdx] as unknown as number[]) || []).length > 0;
+                        return (
+                            <div key={stepIdx} className="flex flex-col gap-1 flex-1" style={{ minWidth: 16 }}>
+                                <div style={{ height: 3, borderRadius: 2, background: isActive ? PANEL.phosphor : 'rgba(0,0,0,0.5)' }} />
+                                <button onClick={() => toggleStep(stepIdx, 0)} style={{ height: 34, borderRadius: 5, cursor: 'pointer',
+                                    border: `1px solid ${hasNote ? brass : line}`, background: hasNote ? `linear-gradient(180deg,${brass},${PANEL.brassDark})` : '#100c08',
+                                    boxShadow: isActive ? `0 0 8px ${PANEL.phosphor}55` : 'none', opacity: (stepIdx % 4 === 0 && !hasNote) ? 0.85 : 0.6 }} />
+                            </div>
+                        );
+                    })}
                 </div>
+            </div>
 
-                {/* INSTRUMENTS (PADS / KEYS) */}
-                <div className="p-4 flex flex-col gap-4 bg-[#1a1c23] min-h-[300px]">
-                    <div className="flex items-center justify-center w-full">
-                        {viewMode === 'DRUMS' && (
-                            <div className="w-full max-w-md grid grid-cols-4 gap-2">
-                                {PAD_NAMES.map((name, i) => (
-                                    <button
-                                        key={i}
-                                        onMouseDown={(e) => handleKeyStart(i, e)}
-                                        onMouseUp={(e) => handleKeyStop(i, e)}
-                                        onMouseLeave={(e) => handleKeyStop(i, e)}
-                                        onTouchStart={(e) => handleKeyStart(i, e)}
-                                        onTouchEnd={(e) => handleKeyStop(i, e)}
-                                        className={`aspect-square bg-gray-800 border-b-4 border-gray-900 rounded-lg flex items-center justify-center relative active:border-b-0 active:translate-y-1 ${activeNotes.includes(i) ? 'bg-indigo-500 border-b-0 translate-y-1' : ''}`}
-                                    >
-                                        <span className="text-[10px] text-gray-400 font-bold">{name}</span>
-                                    </button>
-                                ))}
-                            </div>
-                        )}
-                        {viewMode === 'KEYS' && (
-                            <div className="flex h-40 md:h-64 relative bg-gray-900 p-2 rounded-xl border border-gray-800 shadow-2xl overflow-x-auto select-none w-full">
-                                {[...Array(25)].map((_, i) => {
-                                    const isSharp = KEYS[i % 12].includes('#');
-                                    if (isSharp) return null; 
-                                    return (
-                                        <div key={i} className="relative h-full flex-shrink-0">
-                                            <button 
-                                                onMouseDown={(e) => handleKeyStart(i, e)}
-                                                onMouseUp={(e) => handleKeyStop(i, e)}
-                                                onMouseLeave={(e) => handleKeyStop(i, e)}
-                                                onTouchStart={(e) => handleKeyStart(i, e)}
-                                                onTouchEnd={(e) => handleKeyStop(i, e)}
-                                                className={`w-10 md:w-14 h-full bg-white rounded-b-lg border border-gray-300 origin-top z-10 flex flex-col justify-end pb-2 items-center ${activeNotes.includes(i) ? 'bg-gray-200 scale-y-[0.98]' : ''}`}
-                                            >
-                                                <span className="text-[8px] text-gray-400 font-bold">{KEYS[i%12]}</span>
-                                            </button>
-                                            {KEYS[(i+1)%12]?.includes('#') && (
-                                                <button 
-                                                    onMouseDown={(e) => handleKeyStart(i+1, e)}
-                                                    onMouseUp={(e) => handleKeyStop(i+1, e)}
-                                                    onMouseLeave={(e) => handleKeyStop(i+1, e)}
-                                                    onTouchStart={(e) => handleKeyStart(i+1, e)}
-                                                    onTouchEnd={(e) => handleKeyStop(i+1, e)}
-                                                    className={`absolute top-0 -right-3 w-6 h-[60%] bg-black rounded-b-md z-20 border border-gray-800 ${activeNotes.includes(i+1) ? 'scale-y-[0.98]' : ''}`}
-                                                ></button>
-                                            )}
-                                        </div>
-                                    )
-                                })}
-                            </div>
-                        )}
+            {/* INSTRUMENTS */}
+            <div className="p-3 flex flex-col gap-4">
+                {viewMode === 'DRUMS' && (
+                    <div className="grid grid-cols-4 gap-2 w-full" style={{ maxWidth: 460, margin: '0 auto' }}>
+                        {PAD_NAMES.map((name, i) => (
+                            <button key={i}
+                                onPointerDown={(e) => handleKeyStart(i, e as any)} onPointerUp={(e) => handleKeyStop(i, e as any)} onPointerLeave={(e) => activeNotes.includes(i) && handleKeyStop(i, e as any)}
+                                style={{ aspectRatio: '1', borderRadius: 10, cursor: 'pointer', fontSize: 9.5, letterSpacing: 0.5, textTransform: 'uppercase', touchAction: 'none',
+                                    color: activeNotes.includes(i) ? '#1a0d04' : mute,
+                                    background: activeNotes.includes(i) ? `linear-gradient(180deg,${brass},${PANEL.brassDark})` : 'linear-gradient(180deg,#2a2620,#15110d)',
+                                    border: `1px solid ${activeNotes.includes(i) ? brass : line}`,
+                                    boxShadow: activeNotes.includes(i) ? `0 0 16px ${brass}55` : 'inset 0 1px 0 rgba(255,255,255,0.06), 0 3px 5px rgba(0,0,0,0.4)',
+                                    transform: activeNotes.includes(i) ? 'translateY(2px)' : 'none' }}>
+                                {name}
+                            </button>
+                        ))}
                     </div>
-                    
-                    {/* KAOSS PAD SECTION */}
-                    <div className="w-full flex justify-center">
-                        <div className="w-full max-w-md md:max-w-2xl h-48 rounded-lg shadow-inner bg-black border border-gray-800 relative">
-                            <KaossPad />
-                        </div>
-                    </div>
+                )}
+                {viewMode === 'KEYS' && (
+                    <Keys octaves={2} startMidi={0} activeNotes={activeNotes} onNoteOn={(m) => handleKeyStart(m, { preventDefault() {} } as any)} onNoteOff={(m) => handleKeyStop(m, { preventDefault() {} } as any)} height={150} />
+                )}
 
+                <div style={{ fontSize: 8.5, color: mute, letterSpacing: 2.5, textTransform: 'uppercase' }}>XY Performance</div>
+                <div className="w-full" style={{ maxWidth: 560, margin: '0 auto', height: 180, borderRadius: 10, overflow: 'hidden', background: PANEL.screen, boxShadow: `inset 0 2px 10px rgba(0,0,0,0.9), 0 0 0 1px ${PANEL.brassDark}` }}>
+                    <KaossPad />
                 </div>
             </div>
         </div>
 
-        {/* --- FIXED BOTTOM TRANSPORT BAR --- */}
-        <div className="flex-none h-[72px] bg-[#0f1115] border-t border-gray-800 flex items-center justify-evenly px-4 z-50 md:rounded-b-xl relative shadow-[0_-5px_15px_rgba(0,0,0,0.5)]">
-            
-            {/* BPM Control */}
+        {/* TRANSPORT */}
+        <div className="flex-none flex items-center justify-evenly px-4" style={{ height: 80, borderTop: `1px solid ${line}`, background: 'rgba(0,0,0,0.25)' }}>
             <div className="flex items-center gap-2">
-                <button onClick={() => setBpm(b => Math.max(40, b - 5))} className="w-10 h-10 bg-gray-800 rounded text-gray-400 font-bold">-</button>
-                <div className="text-center w-12">
-                    <div className="text-xl font-bold text-white leading-none">{bpm}</div>
-                    <div className="text-[9px] text-gray-500 font-bold">BPM</div>
+                <button onClick={() => setBpm(b => Math.max(40, b - 5))} style={{ width: 38, height: 38, borderRadius: 8, cursor: 'pointer', background: '#181410', border: `1px solid ${line}`, color: ink, fontSize: 16 }}>−</button>
+                <div className="text-center" style={{ width: 48 }}>
+                    <div style={{ fontFamily: '"DM Serif Display", serif', fontSize: 22, color: ink, lineHeight: 1 }}>{bpm}</div>
+                    <div style={{ fontSize: 8, color: mute, letterSpacing: 1 }}>BPM</div>
                 </div>
-                <button onClick={() => setBpm(b => Math.min(220, b + 5))} className="w-10 h-10 bg-gray-800 rounded text-gray-400 font-bold">+</button>
+                <button onClick={() => setBpm(b => Math.min(220, b + 5))} style={{ width: 38, height: 38, borderRadius: 8, cursor: 'pointer', background: '#181410', border: `1px solid ${line}`, color: ink, fontSize: 16 }}>+</button>
             </div>
-
-            {/* Main Play Button */}
-            <button 
-                onClick={() => setIsPlaying(!isPlaying)}
-                className={`w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-95 border-4 border-[#0f1115] ${isPlaying ? 'bg-red-500 text-white' : 'bg-green-500 text-black'}`}
-            >
-                 <span className="text-2xl font-black">{isPlaying ? '■' : '▶'}</span>
+            <button onClick={() => setIsPlaying(!isPlaying)} style={{ width: 56, height: 56, borderRadius: 999, cursor: 'pointer', fontSize: 22,
+                border: `2px solid ${isPlaying ? '#7a1d10' : brass}`, background: isPlaying ? '#7a1d10' : `linear-gradient(180deg,${brass},${PANEL.brassDark})`, color: isPlaying ? '#f0d57f' : '#1a0d04',
+                boxShadow: isPlaying ? '0 0 20px rgba(122,29,16,0.5)' : `0 0 20px ${brass}44` }}>{isPlaying ? '■' : '▶'}</button>
+            <button onClick={() => setIsRecording(!isRecording)} className="flex flex-col items-center gap-1" style={{ width: 48, cursor: 'pointer', color: isRecording ? '#c4422a' : mute }}>
+                <div style={{ width: 18, height: 18, borderRadius: 999, border: `2px solid ${isRecording ? '#c4422a' : mute}`, background: isRecording ? '#c4422a' : 'transparent' }} />
+                <span style={{ fontSize: 8.5, letterSpacing: 1 }}>REC</span>
             </button>
-
-            {/* Record Toggle */}
-            <button 
-                onClick={() => setIsRecording(!isRecording)}
-                className={`flex flex-col items-center justify-center w-12 gap-1 ${isRecording ? 'text-red-500' : 'text-gray-500'}`}
-            >
-                <div className={`w-5 h-5 rounded-full border-2 ${isRecording ? 'bg-red-600 border-red-500 animate-pulse' : 'bg-transparent border-gray-600'}`}></div>
-                <span className="text-[9px] font-bold">REC</span>
-            </button>
-
         </div>
 
+        </div>
       </div>
     </div>
   );
