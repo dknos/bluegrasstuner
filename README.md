@@ -11,7 +11,7 @@ Lives at **[bluegrasstuner.com](https://bluegrasstuner.com)**.
 
 - React 19 + TypeScript + Vite
 - Tailwind (CDN) for styling
-- Web Audio API (`getUserMedia` + autocorrelation pitch detection)
+- **Pitch detection in Rust → WASM, running in an AudioWorklet** (off the main thread)
 - PWA (installable, offline-capable via service worker)
 
 No backend, no API keys, no tracking. Everything runs client-side in the browser.
@@ -24,6 +24,28 @@ persisted to `localStorage`:
 - **Heirloom** — cream-paper VU needle, walnut frame, brass screws
 - **Studio** — rosewood, brass nameplate, big serif note + strobe tape
 - **Workshop** — oak + green felt concentric dial
+
+## Pitch detection (Rust → WASM)
+
+The tuner's pitch detector is the **McLeod Pitch Method (MPM)** written in Rust
+(`rust/pitch/`), compiled to a ~11KB WASM module, and run inside an
+**AudioWorklet** so analysis never blocks the UI thread. MPM stays accurate down
+to the lowest strings (bass B0 ≈ 30.87 Hz) where plain autocorrelation
+octave-errors.
+
+- `public/pitch.wasm` — the prebuilt module, committed so Cloudflare Pages needs
+  **no Rust toolchain** in CI (it just runs `npm run build`).
+- `public/pitch-processor.js` — the AudioWorklet that loads the WASM (bytes passed
+  via `processorOptions`), accumulates a 4096-sample sliding window, and posts the
+  detected frequency back to the React app.
+
+Rebuild the WASM after changing the Rust (requires `rustup target add
+wasm32-unknown-unknown`):
+
+```bash
+./rust/build.sh                 # builds + copies to public/pitch.wasm
+node rust/pitch/test.mjs        # DSP gate: synthetic tones must land within ±1 cent
+```
 
 ## Develop
 

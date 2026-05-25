@@ -1,0 +1,15 @@
+[package]
+name = "pitch"
+version = "0.1.0"
+edition = "2021"
+description = "McLeod Pitch Method (MPM) detector compiled to WASM for the Bluegrass Tuner AudioWorklet"
+
+[lib]
+crate-type = ["cdylib"]
+
+[profile.release]
+opt-level = 3
+lto = true
+panic = "abort"
+codegen-units = 1
+strip = true

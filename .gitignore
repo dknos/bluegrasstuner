@@ -9,3 +9,6 @@ dist-ssr
 .vscode/*
 !.vscode/extensions.json
 .idea
+
+# Rust/WASM build artifacts
+rust/pitch/target

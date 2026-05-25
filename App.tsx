@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { NoteData, TuningDefinition } from './types';
-import { autoCorrelate, getTargetNote, INSTRUMENT_DATA, playTone } from './services/audioUtils';
+import { getTargetNote, INSTRUMENT_DATA, playTone } from './services/audioUtils';
 import FrequencyVisualizer from './components/FrequencyVisualizer';
 import TunerGauge, { Cabinet, CABINETS } from './components/TunerGauge';
 import InstrumentGraphic from './components/InstrumentGraphic';
@@ -90,6 +90,9 @@ const App: React.FC = () => {
   
   const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const rafRef = useRef<number | null>(null);
+  // WASM AudioWorklet pitch detector: node + latest detected frequency (-1 = none)
+  const workletRef = useRef<AudioWorkletNode | null>(null);
+  const workletFreqRef = useRef<number>(-1);
 
   // Safe Derivation of Current Tuning
   const instrumentData = INSTRUMENT_DATA[instrument];
@@ -159,10 +162,28 @@ const App: React.FC = () => {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
       const ana = ctx.createAnalyser();
       
-      ana.fftSize = 4096; 
+      ana.fftSize = 4096;
       const source = ctx.createMediaStreamSource(stream);
       source.connect(ana);
-      
+
+      // Pitch detection runs in a Rust/WASM AudioWorklet, off the main thread.
+      // The analyser above is kept only for the spectrum visualizer + dB meter.
+      workletFreqRef.current = -1;
+      try {
+        const base = import.meta.env.BASE_URL || '/';
+        await ctx.audioWorklet.addModule(`${base}pitch-processor.js`);
+        const wasmBytes = await fetch(`${base}pitch.wasm`).then(r => r.arrayBuffer());
+        const node = new AudioWorkletNode(ctx, 'pitch', { processorOptions: { wasmBytes } });
+        node.port.onmessage = (e) => {
+          if (e.data?.type === 'pitch') workletFreqRef.current = e.data.freq;
+        };
+        source.connect(node);
+        node.connect(ctx.destination); // worklet writes no output (silent); needed so process() runs
+        workletRef.current = node;
+      } catch (err) {
+        console.error('Pitch worklet failed to start:', err);
+      }
+
       sourceRef.current = source;
       setAudioContext(ctx);
       setAnalyser(ana);
@@ -179,6 +200,12 @@ const App: React.FC = () => {
     if (isToggling) return;
     setIsToggling(true);
     try {
+        if (workletRef.current) {
+            workletRef.current.port.onmessage = null;
+            workletRef.current.disconnect();
+            workletRef.current = null;
+        }
+        workletFreqRef.current = -1;
         if (sourceRef.current) {
             sourceRef.current.mediaStream.getTracks().forEach(track => track.stop());
             sourceRef.current.disconnect();
@@ -201,13 +228,11 @@ const App: React.FC = () => {
   useEffect(() => {
     if (!analyser || !isListening || !audioContext) return;
 
-    const buffer = new Float32Array(analyser.fftSize);
     const dbBuffer = new Uint8Array(analyser.frequencyBinCount);
 
     const updatePitch = () => {
-      // Pitch
-      analyser.getFloatTimeDomainData(buffer);
-      const fundamentalFreq = autoCorrelate(buffer, audioContext.sampleRate);
+      // Pitch comes from the WASM worklet (off-thread); read its latest result.
+      const fundamentalFreq = workletFreqRef.current;
 
       if (fundamentalFreq !== -1) {
         const noteData = getTargetNote(fundamentalFreq, currentTuning, manualStringIndex);
