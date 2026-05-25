@@ -1,0 +1,132 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  background-color: var(--c-gray-950);
+  color: var(--c-text-white);
+  overflow-x: hidden;
+  transition: background-color 0.3s, color 0.3s;
+}
+
+/* GLOBAL MOBILE FIXES */
+.tool-page { padding-top: 60px; min-height: 100vh; overflow-x: hidden; }
+
+#global-close-x {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 99999;
+  width: 56px;
+  height: 56px;
+  background: rgba(0,0,0,0.7);
+  border: 2px solid #00ff00;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #00ff00;
+  box-shadow: 0 0 15px rgba(0,255,0,0.3);
+  backdrop-filter: blur(4px);
+  transition: transform 0.1s;
+}
+#global-close-x:active { transform: scale(0.95); }
+
+@media (max-width: 768px) {
+  .hide-on-mobile { display: block !important; }
+  .patchbay-container { max-height: 80vh; overflow-y: auto; }
+}
+
+/* CRT Effects */
+.crt-scanline {
+  background: linear-gradient(to bottom, rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+  background-size: 100% 4px;
+}
+.text-phosphor {
+  color: #33ff33;
+  text-shadow: 0 0 5px #33ff33, 0 0 10px #33ff33;
+}
+.slider-vertical {
+  -webkit-appearance: slider-vertical;
+}
+
+/* --- THEMES --- */
+
+/* ORIGINAL (Default) */
+.theme-original {
+  --c-gray-750: #2d3748;
+  --c-gray-800: #1f2937;
+  --c-gray-850: #1a202c;
+  --c-gray-900: #111827;
+  --c-gray-950: #0f172a; /* Slate 900 */
+
+  --c-neon-blue: #00f3ff;
+  --c-neon-pink: #ff00ff;
+  --c-neon-green: #00ff00;
+
+  --c-text-white: #ffffff;
+  --c-text-black: #000000;
+}
+
+/* DARK MODE (OLED/High Contrast) */
+.theme-dark {
+  --c-gray-750: #1a1a1a;
+  --c-gray-800: #171717;
+  --c-gray-850: #0a0a0a;
+  --c-gray-900: #050505;
+  --c-gray-950: #000000;
+
+  --c-neon-blue: #3b82f6; /* Darker blue */
+  --c-neon-pink: #9d174d;
+  --c-neon-green: #15803d;
+
+  --c-text-white: #e5e5e5;
+  --c-text-black: #000000;
+}
+
+/* HAPPY GIRL (Lavender/Purple - Pleasant Light) */
+.theme-happy {
+  --c-gray-750: #a855f7;
+  --c-gray-800: #e9d5ff;
+  --c-gray-850: #f3e8ff;
+  --c-gray-900: #faf5ff;
+  --c-gray-950: #fbf7ff;
+
+  --c-neon-blue: #7e22ce;
+  --c-neon-pink: #db2777;
+  --c-neon-green: #0d9488;
+
+  --c-text-white: #4c1d95;
+  --c-text-black: #2e1065;
+}
+
+/* HAPPY GIRL DARK (Deep Violet/Neon - Pleasant Dark) */
+.theme-happy-dark {
+  --c-gray-750: #581c87; /* Purple 900 */
+  --c-gray-800: #4c1d95; /* Violet 900 */
+  --c-gray-850: #3b0764; /* Purple 950 */
+  --c-gray-900: #2e1065; /* Violet 950 */
+  --c-gray-950: #1a0b2e; /* Deepest Purple/Black */
+
+  --c-neon-blue: #d8b4fe; /* Lavender */
+  --c-neon-pink: #f472b6; /* Pink 400 */
+  --c-neon-green: #2dd4bf; /* Teal 400 */
+
+  --c-text-white: #f3e8ff; /* Light Lavender */
+  --c-text-black: #000000;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--c-gray-900);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--c-gray-750);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--c-neon-blue);
+}
