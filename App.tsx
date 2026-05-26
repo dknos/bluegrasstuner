@@ -22,7 +22,6 @@ import Spectravox from './components/Spectravox';
 import ReeseSynth from './components/ReeseSynth';
 import OPL3Synth from './components/OPL3Synth';
 import WavetableSynth from './components/WavetableSynth';
-import OpenJamSimulator from './components/OpenJamSimulator';
 
 const App: React.FC = () => {
   const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
@@ -51,8 +50,7 @@ const App: React.FC = () => {
   const [showTempoGame, setShowTempoGame] = useState(false);
   const [showTimeSigGame, setShowTimeSigGame] = useState(false);
   const [showDrumMachine, setShowDrumMachine] = useState(false);
-  const [showJamSimulator, setShowJamSimulator] = useState(false);
-  
+
   // Synths Hub State
   const [showSynthsHub, setShowSynthsHub] = useState(false);
   const [showDSynth, setShowDSynth] = useState(false);
@@ -62,7 +60,7 @@ const App: React.FC = () => {
   const [showWavetable, setShowWavetable] = useState(false);
 
   // Check if any full-screen tool is open
-  const isToolOpen = showSynthsHub || showDrumMachine || showDSynth || showSpectravox || showReese || showOPL3 || showWavetable || showTabScroller || showChordCreator || showCalculator || showJamSimulator;
+  const isToolOpen = showSynthsHub || showDrumMachine || showDSynth || showSpectravox || showReese || showOPL3 || showWavetable || showTabScroller || showChordCreator || showCalculator;
 
   // Skins State
   const [currentSkin, setCurrentSkin] = useState<'original' | 'dark' | 'happy' | 'happy-dark'>('original');
@@ -291,7 +289,6 @@ const App: React.FC = () => {
       setShowCircleGame(false);
       setShowNumbersGame(false);
       setShowCagedGame(false);
-      setShowJamSimulator(false);
   };
 
   // Synth Hub Launcher Card — vintage rack plate
@@ -359,8 +356,7 @@ const App: React.FC = () => {
       {showTabScroller && <TabScroller onClose={() => setShowTabScroller(false)} onToggleMetronome={() => setShowMetronome(!showMetronome)} />}
       {showCalculator && <SecretCalculator onClose={() => setShowCalculator(false)} />}
       {showDrumMachine && <DrumMachine onClose={() => setShowDrumMachine(false)} />}
-      {showJamSimulator && <OpenJamSimulator onClose={() => setShowJamSimulator(false)} />}
-      
+
       {/* Synths (Rendered when active) */}
       {showDSynth && <DSynth onClose={() => setShowDSynth(false)} />}
       {showSpectravox && <Spectravox onClose={() => setShowSpectravox(false)} />}
@@ -412,7 +408,6 @@ const App: React.FC = () => {
                   <>
                       <DropdownItem onClick={() => openModal(setShowSynthsHub)} label="Synths Hub (5 Engines)" />
                       <div className="h-px bg-gray-800 my-1"></div>
-                      <DropdownItem onClick={() => openModal(setShowJamSimulator)} label="Open Jam" />
                       <DropdownItem onClick={() => openModal(setShowTabScroller)} label="Guitar Tab Auto-Scroller" />
                       <DropdownItem onClick={() => openModal(setShowDrumMachine)} label="Drum Machine + Keys" />
                       <DropdownItem onClick={() => openModal(setShowChordGame)} label="Chord Quiz" />
