@@ -146,6 +146,7 @@ const OpenJamSimulator: React.FC<OpenJamSimulatorProps> = ({ onClose }) => {
     // New Feature State
     const [strumStyle, setStrumStyle] = useState<StrumStyle>('Bluegrass');
     const [instrumentMix, setInstrumentMix] = useState<'GUITAR' | 'BASS' | 'FULL'>('FULL');
+    const [swing, setSwing] = useState(0.35); // 0 straight .. 1 hard shuffle
     const [autoSpeedup, setAutoSpeedup] = useState(false);
     const [speedupAmount, setSpeedupAmount] = useState(5);
     const [speedupInterval, setSpeedupInterval] = useState(4); // Measures
@@ -174,6 +175,7 @@ const OpenJamSimulator: React.FC<OpenJamSimulatorProps> = ({ onClose }) => {
     const bpmRef = useRef(bpm);
     const styleRef = useRef(strumStyle);
     const mixRef = useRef(instrumentMix);
+    const swingRef = useRef(swing);
     const isPlayingRef = useRef(isPlaying);
     const loopRef = useRef({ start: 0, end: 100 }); // 0-indexed internally
 
@@ -192,6 +194,7 @@ const OpenJamSimulator: React.FC<OpenJamSimulatorProps> = ({ onClose }) => {
     useEffect(() => { bpmRef.current = bpm; }, [bpm]);
     useEffect(() => { styleRef.current = strumStyle; }, [strumStyle]);
     useEffect(() => { mixRef.current = instrumentMix; }, [instrumentMix]);
+    useEffect(() => { swingRef.current = swing; }, [swing]);
     useEffect(() => { isPlayingRef.current = isPlaying; }, [isPlaying]);
     useEffect(() => { loopRef.current = { start: loopStart - 1, end: loopEnd - 1 }; }, [loopStart, loopEnd]);
 
@@ -290,7 +293,7 @@ const OpenJamSimulator: React.FC<OpenJamSimulatorProps> = ({ onClose }) => {
 
                 // Get Frequencies & Patterns
                 const chordData = getChordData(currentChordName);
-                const pattern = generatePattern(styleRef.current, beatsPerBar);
+                const pattern = generatePattern(styleRef.current, beatsPerBar, swingRef.current);
 
                 // Find event for this beat (floor check, pattern events are beat offsets)
                 // Filter pattern events that happen within this beat window
@@ -555,6 +558,18 @@ const OpenJamSimulator: React.FC<OpenJamSimulatorProps> = ({ onClose }) => {
                         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
                             <Rocker label="Feel" options={STYLE_LABELS} value={STYLES.indexOf(strumStyle)} onChange={(i) => setStrumStyle(STYLES[i])} />
                             <Rocker label="Mix" options={MIX_LABELS} value={MIXES.indexOf(instrumentMix)} onChange={(i) => setInstrumentMix(MIXES[i])} />
+                        </div>
+
+                        {/* Swing — you dial the groove (the one thing I can't judge by ear). */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 7, padding: '9px 12px', borderRadius: 8, background: '#141009', boxShadow: `inset 0 0 0 1px ${PANEL.line}` }}>
+                            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+                                <Engrave>Swing · Groove</Engrave>
+                                <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, letterSpacing: 1, color: swing < 0.04 ? PANEL.inkMute : PANEL.phosphor }}>
+                                    {swing < 0.04 ? 'STRAIGHT' : swing > 0.9 ? 'SHUFFLE' : `${Math.round(50 + swing * 25)}%`}
+                                </span>
+                            </div>
+                            <input type="range" min={0} max={1} step={0.01} value={swing} onChange={(e) => setSwing(Number(e.target.value))}
+                                style={{ width: '100%', accentColor: PANEL.brass }} aria-label="Swing amount" />
                         </div>
 
                         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'stretch' }}>

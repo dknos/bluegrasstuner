@@ -9,8 +9,21 @@ export interface AudioEvent {
     velocity: number;
 }
 
-// Generate events for 1 Measure
-export const generatePattern = (style: StrumStyle, beatsPerBar: number): AudioEvent[] => {
+// Swing the straight-8th offbeats (the "and", frac ≈ .5) by a user-set amount.
+// 0 = dead straight (.50), 1 = hard shuffle (~.75 triplet). Downbeats and other
+// subdivisions (e.g. the Swing style's .66 triplets) are left untouched.
+const applySwing = (events: AudioEvent[], swing: number): AudioEvent[] => {
+    if (swing <= 0) return events;
+    return events.map(e => {
+        const whole = Math.floor(e.beatOffset);
+        const frac = e.beatOffset - whole;
+        if (Math.abs(frac - 0.5) < 0.001) return { ...e, beatOffset: whole + 0.5 + swing * 0.25 };
+        return e;
+    });
+};
+
+// Generate events for 1 Measure. `swing` 0..1 controls offbeat lilt (user knob).
+export const generatePattern = (style: StrumStyle, beatsPerBar: number, swing = 0): AudioEvent[] => {
     const events: AudioEvent[] = [];
 
     // Velocities reduced by ~20% to prevent master bus clipping
@@ -24,6 +37,7 @@ export const generatePattern = (style: StrumStyle, beatsPerBar: number): AudioEv
         events.push({ type: 'STRUM_MUTE', beatOffset: 3, velocity: 0.6 });
 
         // Bluegrass drives harder: ringing offbeat upstrokes between the chucks.
+        // Defined straight (.5); the Swing knob swings them to taste.
         if (style === 'Bluegrass') {
             events.push({ type: 'STRUM_UP', beatOffset: 1.5, velocity: 0.32 });
             events.push({ type: 'STRUM_UP', beatOffset: 3.5, velocity: 0.38 });
@@ -51,5 +65,5 @@ export const generatePattern = (style: StrumStyle, beatsPerBar: number): AudioEv
         events.push({ type: 'STRUM_DOWN', beatOffset: 3, velocity: 0.6 });
     }
 
-    return events;
+    return applySwing(events, swing);
 };

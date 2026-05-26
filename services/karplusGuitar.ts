@@ -157,12 +157,18 @@ export class KarplusGuitarEngine {
     return buf;
   }
 
+  /** Nudge a gesture's start a few ms off the grid so the groove isn't robotic. */
+  private feel(time: number): number {
+    return Math.max(time + (Math.random() * 2 - 1) * 0.005, this.ctx.currentTime);
+  }
+
   private voice(freq: number, time: number, velocity: number, kind: Kind, dest: AudioNode): void {
     const src = this.ctx.createBufferSource();
     src.buffer = this.getBuffer(freq, kind);
     src.detune.value = (Math.random() * 2 - 1) * 4; // ±4¢ human pitch wander
     const g = this.ctx.createGain();
-    g.gain.value = KIND[kind].gain * clamp(velocity, 0.05, 1);
+    // ±10% velocity wander per string so repeats never sound stamped-out.
+    g.gain.value = KIND[kind].gain * clamp(velocity * (0.9 + Math.random() * 0.2), 0.04, 1);
     src.connect(g);
     g.connect(dest);
     const t = Math.max(time, this.ctx.currentTime);
@@ -175,21 +181,24 @@ export class KarplusGuitarEngine {
 
   /** Roll a full chord as a strum — staggered low→high (DOWN) or high→low (UP). */
   playGuitarStrum(freqs: number[], time: number, direction: 'DOWN' | 'UP', velocity: number, _bpm: number): void {
+    const t = this.feel(time);
     const order = direction === 'DOWN' ? freqs : [...freqs].reverse();
-    const spread = direction === 'DOWN' ? 0.020 : 0.014; // seconds across the strings
+    const base = direction === 'DOWN' ? 0.020 : 0.014; // seconds across the strings
+    const spread = base * (0.85 + Math.random() * 0.3); // vary the roll so no two strums are identical
     const step = order.length > 1 ? spread / (order.length - 1) : 0;
-    order.forEach((f, i) => this.voice(f, time + i * step, velocity * (1 - i * 0.04), 'guitar', this.body.input));
+    order.forEach((f, i) => this.voice(f, t + i * step, velocity * (1 - i * 0.04), 'guitar', this.body.input));
   }
 
   /** The boom-CHUCK backbeat: a tight, muted, percussive chord choke on 2 & 4. */
   playChuck(freqs: number[], time: number, velocity: number, _bpm: number): void {
+    const t = this.feel(time);
     const step = 0.006;
-    freqs.forEach((f, i) => this.voice(f, time + i * step, velocity, 'chuck', this.body.input));
+    freqs.forEach((f, i) => this.voice(f, t + i * step, velocity, 'chuck', this.body.input));
   }
 
   /** Alternating root/fifth bass note (boom). */
   playBassNote(freq: number, time: number, velocity: number): void {
-    this.voice(freq, time, velocity, 'bass', this.bassLP);
+    this.voice(freq, this.feel(time), velocity, 'bass', this.bassLP);
   }
 
   connect(dest: AudioNode): void { this.master.output.connect(dest); }
