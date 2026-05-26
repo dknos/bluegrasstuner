@@ -1,5 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
+import { SynthShell, Knob, Engrave, PANEL } from './synthkit';
 
 interface TabScrollerProps {
   onClose: () => void;
@@ -12,6 +13,9 @@ declare global {
   }
 }
 
+const SERIF = '"DM Serif Display", Georgia, serif';
+const MONO = '"JetBrains Mono", ui-monospace, monospace';
+
 // --- TRANSPOSE ENGINE ---
 const NOTES_SHARP = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 const NOTES_FLAT  = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"];
@@ -19,12 +23,12 @@ const NOTES_FLAT  = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb",
 const getTransposedNote = (note: string, semitones: number): string => {
     const isFlat = note.includes('b');
     const scale = isFlat ? NOTES_FLAT : NOTES_SHARP;
-    
+
     let idx = scale.indexOf(note);
     if (idx === -1) {
         const altScale = isFlat ? NOTES_SHARP : NOTES_FLAT;
         idx = altScale.indexOf(note);
-        if (idx === -1) return note; 
+        if (idx === -1) return note;
     }
 
     let newIdx = (idx + semitones) % 12;
@@ -52,16 +56,44 @@ const processTransposeText = (text: string, direction: number) => {
             // Strictly matches Note Root (A-G) optional Accidental (#/b) and specific suffixes
             // Does NOT match "x1" "x2" or arbitrary words
             return line.replace(/\b([A-G][#b]?)(m|min|maj|dim|aug|sus|add|7|9|11|13|6|5|\/[A-G][#b]?)?(\s|[.,]|$)/g, (match, root, suffix, spacer) => {
-                // If it looks like a word (e.g. "A" in "A cat"), ignore? 
+                // If it looks like a word (e.g. "A" in "A cat"), ignore?
                 // Hard to tell perfectly without context, but this regex expects a valid suffix or space/end.
                 // It excludes things like "Amigo" because "migo" isnt a suffix.
-                
+
                 const newRoot = getTransposedNote(root, direction);
                 return newRoot + (suffix || "") + (spacer || "");
             });
         }
     }).join('\n');
 };
+
+// ── small brass-faced transport / utility button ───────────────────────────
+const PanelButton: React.FC<{
+  onClick?: () => void; title?: string; disabled?: boolean; active?: boolean;
+  accent?: string; size?: number; children: React.ReactNode;
+}> = ({ onClick, title, disabled, active, accent = PANEL.brass, size = 40, children }) => (
+  <button
+    onClick={onClick}
+    disabled={disabled}
+    title={title}
+    aria-label={title}
+    style={{
+      width: size, height: size, flex: '0 0 auto', borderRadius: 9, cursor: disabled ? 'default' : 'pointer',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontFamily: MONO, fontSize: 13, fontWeight: 700, letterSpacing: 0.5,
+      border: `1px solid ${active ? accent : 'rgba(0,0,0,0.55)'}`,
+      background: active
+        ? `linear-gradient(180deg, ${PANEL.brassLite}, ${PANEL.brass})`
+        : 'linear-gradient(180deg, #2a241c, #15110d)',
+      color: active ? '#1a0d04' : PANEL.ink,
+      opacity: disabled ? 0.4 : 1,
+      boxShadow: active
+        ? `0 0 14px ${accent}55, inset 0 1px 0 rgba(255,255,255,0.3)`
+        : 'inset 0 1px 0 rgba(255,255,255,0.06), 0 2px 4px rgba(0,0,0,0.5)',
+      transition: 'all .1s',
+    }}
+  >{children}</button>
+);
 
 const TabScroller: React.FC<TabScrollerProps> = ({ onClose, onToggleMetronome }) => {
   const [viewMode, setViewMode] = useState<'text' | 'pdf' | 'image'>('text');
@@ -76,7 +108,7 @@ const TabScroller: React.FC<TabScrollerProps> = ({ onClose, onToggleMetronome })
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const textAreaRef = useRef<HTMLTextAreaElement>(null); 
+  const textAreaRef = useRef<HTMLTextAreaElement>(null);
   const lastScrollTime = useRef<number>(0);
   const requestRef = useRef<number | null>(null);
   const scrollAccumulator = useRef<number>(0);
@@ -91,7 +123,7 @@ const TabScroller: React.FC<TabScrollerProps> = ({ onClose, onToggleMetronome })
         if (Math.abs(scrollAccumulator.current) >= 1) {
              const currentScroll = scrollContainerRef.current.scrollTop;
              scrollContainerRef.current.scrollTop = currentScroll + scrollAccumulator.current;
-             scrollAccumulator.current = 0; 
+             scrollAccumulator.current = 0;
         }
     }
     lastScrollTime.current = time;
@@ -134,7 +166,7 @@ const TabScroller: React.FC<TabScrollerProps> = ({ onClose, onToggleMetronome })
             const pdf = await loadingTask.promise;
             setPdfDoc(pdf);
             setViewMode('pdf');
-            setZoomLevel(1.5); 
+            setZoomLevel(1.5);
           } else {
               alert("PDF Renderer not ready. Please try again in a moment.");
           }
@@ -150,7 +182,7 @@ const TabScroller: React.FC<TabScrollerProps> = ({ onClose, onToggleMetronome })
               if (text) {
                   setTabText(text);
                   setViewMode('text');
-                  setZoomLevel(14); 
+                  setZoomLevel(14);
                   setTransposeVal(0);
               }
           };
@@ -201,127 +233,173 @@ const TabScroller: React.FC<TabScrollerProps> = ({ onClose, onToggleMetronome })
       URL.revokeObjectURL(url);
   };
 
+  const isText = viewMode === 'text';
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-md p-2 md:p-4 animate-fade-in font-mono">
-       <div className="bg-gray-900 border border-gray-700 rounded-2xl w-full max-w-6xl h-[95vh] flex flex-col shadow-2xl relative overflow-hidden">
-          
-          {/* Header */}
-          <div className="flex-none p-3 border-b border-gray-800 bg-gray-950 flex justify-between items-center pr-4">
-             <div className="flex items-center gap-2">
-                 <h2 className="text-sm md:text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-neon-blue to-purple-500 truncate">TAB SCROLLER</h2>
-             </div>
-             <button onClick={onClose} className="w-10 h-10 bg-red-600 hover:bg-red-500 rounded-lg flex items-center justify-center text-white font-bold shadow-lg flex-shrink-0" title="Close">✕</button>
+    <SynthShell name="Tab Scroller" tag="Auto-Scroll · Tablature" onClose={onClose} accent={PANEL.brass}>
+
+      {/* ── TRANSPORT DECK ── brass bar: run/stop + speed dial + utilities ── */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap',
+        padding: '12px 12px 10px', borderRadius: 10,
+        background: 'linear-gradient(180deg, rgba(0,0,0,0.28), rgba(0,0,0,0.12))',
+        boxShadow: `inset 0 0 0 1px ${PANEL.line}`,
+      }}>
+        {/* RUN / STOP */}
+        <button
+          onClick={() => setIsPlaying(!isPlaying)}
+          aria-label={isPlaying ? 'Stop scrolling' : 'Start scrolling'}
+          style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
+            width: 76, padding: '10px 0', borderRadius: 10, cursor: 'pointer',
+            border: `2px solid ${isPlaying ? '#a8472a' : PANEL.brass}`,
+            background: isPlaying
+              ? 'linear-gradient(180deg, #3a1c1c, #2a1212)'
+              : `linear-gradient(180deg, ${PANEL.brassLite}, ${PANEL.brass})`,
+            color: isPlaying ? '#e6b0a0' : '#1a0d04',
+            boxShadow: isPlaying
+              ? 'inset 0 1px 0 rgba(255,255,255,0.06), 0 2px 4px rgba(0,0,0,0.5)'
+              : `0 0 18px ${PANEL.brass}55, inset 0 1px 0 rgba(255,255,255,0.3)`,
+            transition: 'all .1s',
+          }}
+        >
+          <span style={{ fontFamily: SERIF, fontSize: 22, lineHeight: 1 }}>{isPlaying ? '❚❚' : '▶'}</span>
+          <span style={{ fontFamily: MONO, fontSize: 8, letterSpacing: 2, textTransform: 'uppercase' }}>{isPlaying ? 'Stop' : 'Run'}</span>
+        </button>
+
+        {/* SCROLL SPEED DIAL */}
+        <Knob
+          label="Speed"
+          value={speed}
+          min={1}
+          max={100}
+          step={1}
+          onChange={(v) => setSpeed(v)}
+          size={56}
+        />
+
+        {/* UTILITIES — push to the right on wide screens */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
+          <input ref={fileInputRef} type="file" multiple accept=".txt,.tab,.png,.jpg,.jpeg,.webp,.pdf" style={{ display: 'none' }} onChange={handleFileUpload} />
+
+          <PanelButton onClick={() => fileInputRef.current?.click()} title="Open file (tab / image / PDF)">
+            <svg width="17" height="17" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v8a2 2 0 01-2 2H5z" /></svg>
+          </PanelButton>
+
+          {isText && (
+            <PanelButton onClick={handleSaveMainText} disabled={!tabText} title="Save tab to file">
+              <svg width="17" height="17" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" /></svg>
+            </PanelButton>
+          )}
+
+          <PanelButton onClick={onToggleMetronome} title="Open metronome" active>M</PanelButton>
+        </div>
+      </div>
+
+      {/* ── KEY (transpose) + ZOOM controls ── */}
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 16, flexWrap: 'wrap' }}>
+        {/* TRANSPOSE */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 5, opacity: isText ? 1 : 0.35, pointerEvents: isText ? 'auto' : 'none' }}>
+          <Engrave>Key</Engrave>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+            <PanelButton onClick={() => handleTranspose(-1)} title="Transpose down" size={36}>–</PanelButton>
+            <div style={{
+              minWidth: 58, textAlign: 'center', padding: '6px 8px', borderRadius: 7,
+              background: PANEL.screen, boxShadow: `inset 0 1px 5px rgba(0,0,0,0.9), 0 0 0 1px ${PANEL.brassDark}`,
+            }}>
+              <span style={{ fontFamily: MONO, fontSize: 14, fontWeight: 600, color: PANEL.phosphor, textShadow: `0 0 6px ${PANEL.phosphor}88` }}>
+                {transposeVal > 0 ? `+${transposeVal}` : transposeVal}
+              </span>
+            </div>
+            <PanelButton onClick={() => handleTranspose(1)} title="Transpose up" size={36}>+</PanelButton>
           </div>
-          
-          {/* CONTROL BAR - COMPACT FLEX */}
-          <div className="flex-none bg-gray-900 border-b border-gray-800 p-2 overflow-hidden">
-              <div className="flex flex-wrap items-center gap-2 justify-between">
-                  
-                  {/* PLAYBACK */}
-                  <div className="flex items-center gap-2 bg-gray-800 p-1 rounded-lg flex-shrink-0">
-                      <button 
-                         onClick={() => setIsPlaying(!isPlaying)}
-                         className={`w-10 h-8 flex items-center justify-center rounded font-bold shadow active:scale-95 ${isPlaying ? 'bg-red-600 text-white' : 'bg-green-600 text-black'}`}
-                      >
-                          {isPlaying ? '||' : '▶'}
-                      </button>
-                      <div className="flex flex-col w-16">
-                          <input type="range" min="1" max="100" value={speed} onChange={(e) => setSpeed(Number(e.target.value))} className="h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-neon-blue" />
-                          <div className="flex justify-between text-[8px] text-gray-400 font-bold uppercase mt-1"><span>Spd</span><span>{speed}</span></div>
-                      </div>
-                  </div>
+        </div>
 
-                  {/* EDITING */}
-                  <div className="flex items-center gap-2 bg-gray-800 p-1 rounded-lg flex-shrink-0">
-                      <div className={`flex flex-col w-14 ${viewMode !== 'text' ? 'opacity-30 pointer-events-none' : ''}`}>
-                          <div className="flex gap-1 h-5">
-                              <button onClick={() => handleTranspose(-1)} className="flex-1 bg-gray-700 hover:bg-gray-600 rounded text-white text-xs">-</button>
-                              <button onClick={() => handleTranspose(1)} className="flex-1 bg-gray-700 hover:bg-gray-600 rounded text-white text-xs">+</button>
-                          </div>
-                          <div className="text-[8px] text-center text-gray-400 mt-1 uppercase font-bold truncate">
-                              Key {transposeVal > 0 ? `+${transposeVal}` : transposeVal}
-                          </div>
-                      </div>
-                      <div className="flex flex-col w-14">
-                          <input 
-                            type="range" 
-                            min={viewMode === 'text' ? "6" : "0.25"} 
-                            max={viewMode === 'text' ? "32" : "3.0"} 
-                            step={viewMode === 'text' ? "1" : "0.1"}
-                            value={zoomLevel} 
-                            onChange={(e) => setZoomLevel(Number(e.target.value))} 
-                            className="h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-neon-blue" 
-                          />
-                          <div className="text-[8px] text-center text-gray-400 mt-1 uppercase font-bold">Zoom</div>
-                      </div>
-                  </div>
+        {/* ZOOM */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: 1, minWidth: 130 }}>
+          <Engrave>Zoom · {isText ? `${zoomLevel}px` : `${Math.round(zoomLevel * 100)}%`}</Engrave>
+          <input
+            type="range"
+            min={isText ? "6" : "0.25"}
+            max={isText ? "32" : "3.0"}
+            step={isText ? "1" : "0.1"}
+            value={zoomLevel}
+            onChange={(e) => setZoomLevel(Number(e.target.value))}
+            style={{
+              width: '100%', height: 6, borderRadius: 6, appearance: 'none', WebkitAppearance: 'none',
+              cursor: 'pointer', accentColor: PANEL.brass,
+              background: `linear-gradient(90deg, ${PANEL.brassDark}, ${PANEL.brass})`,
+              boxShadow: `inset 0 1px 3px rgba(0,0,0,0.8)`,
+            }}
+          />
+        </div>
+      </div>
 
-                  {/* ACTIONS */}
-                  <div className="flex items-center gap-1.5 flex-shrink-0 ml-auto">
-                       <input ref={fileInputRef} type="file" multiple accept=".txt,.tab,.png,.jpg,.jpeg,.webp,.pdf" className="hidden" onChange={handleFileUpload} />
-                       
-                       <button onClick={() => fileInputRef.current?.click()} className="w-8 h-8 bg-blue-600 hover:bg-blue-500 rounded flex items-center justify-center text-white shadow" title="Open File">
-                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v8a2 2 0 01-2 2H5z"></path></svg>
-                       </button>
+      {/* ── PHOSPHOR READOUT ── recessed screen the tab scrolls through ── */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <Engrave>{isText ? 'Tablature' : viewMode === 'pdf' ? 'Sheet · PDF' : 'Sheet · Image'}</Engrave>
+        <div style={{
+          position: 'relative', height: '46dvh', minHeight: 220, borderRadius: 10, overflow: 'hidden', padding: 4,
+          background: '#060806',
+          boxShadow: `inset 0 2px 12px rgba(0,0,0,0.95), 0 0 0 1px ${PANEL.brassDark}, 0 0 0 3px rgba(0,0,0,0.5)`,
+        }}>
+          {/* inner screen surface (preserves the scrollTop autoscroll mechanic) */}
+          <div ref={scrollContainerRef} style={{
+            position: 'absolute', inset: 4, overflowY: 'auto', borderRadius: 6,
+            background: isText
+              ? `radial-gradient(120% 90% at 50% 0%, #0f140d, ${PANEL.screen})`
+              : '#1a1a1a',
+            scrollBehavior: 'smooth',
+          }}>
+            <div style={{ minHeight: '150%', padding: isText ? '14px 14px 50vh' : '12px 12px 50vh', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
 
-                       {viewMode === 'text' && (
-                           <button onClick={handleSaveMainText} disabled={!tabText} className={`w-8 h-8 bg-gray-700 hover:bg-gray-600 rounded flex items-center justify-center text-white shadow ${!tabText ? 'opacity-50' : ''}`} title="Save">
-                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
-                           </button>
-                       )}
+              {/* TEXT VIEW */}
+              {viewMode === 'text' && (
+                <textarea
+                  ref={textAreaRef}
+                  value={tabText}
+                  onChange={(e) => setTabText(e.target.value)}
+                  style={{
+                    width: '100%', maxWidth: 880, margin: '0 auto', background: 'transparent', border: 'none', outline: 'none',
+                    resize: 'none', overflow: 'hidden', whiteSpace: 'pre',
+                    fontFamily: MONO, fontSize: `${zoomLevel}px`, lineHeight: 1.4,
+                    color: PANEL.phosphor, textShadow: `0 0 5px ${PANEL.phosphor}66, 0 0 9px ${PANEL.phosphor}33`, caretColor: PANEL.brassLite,
+                  }}
+                  placeholder="Paste a guitar tab here, or open a file…"
+                  spellCheck={false}
+                />
+              )}
 
-                       <button onClick={onToggleMetronome} className="w-8 h-8 bg-gray-800 border border-gray-600 rounded flex items-center justify-center text-gray-300" title="Metronome">
-                           <span className="text-xs">M</span>
-                       </button>
-                  </div>
-              </div>
+              {/* IMAGE VIEW */}
+              {viewMode === 'image' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16, width: '100%', alignItems: 'center' }}>
+                  {imageUrls.map((url, i) => (
+                    <img key={i} src={url} alt={`Tab Page ${i + 1}`} style={{ width: `${zoomLevel * 100}%`, maxWidth: '100%', boxShadow: '0 8px 22px rgba(0,0,0,0.6)' }} />
+                  ))}
+                </div>
+              )}
+
+              {/* PDF VIEW */}
+              {viewMode === 'pdf' && pdfDoc && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16, width: '100%', alignItems: 'center' }}>
+                  {Array.from({ length: pdfDoc.numPages }, (_, i) => (
+                    <canvas key={i} ref={el => { canvasRefs.current[i] = el; }} style={{ maxWidth: '100%', background: '#fff', boxShadow: '0 8px 22px rgba(0,0,0,0.6)' }} />
+                  ))}
+                </div>
+              )}
+
+            </div>
           </div>
 
-          {/* MAIN VIEWER AREA */}
-          <div className="flex-1 relative bg-[#151515] overflow-hidden flex justify-center">
-              <div ref={scrollContainerRef} className="absolute inset-0 overflow-y-auto scroll-smooth">
-                  <div className="min-h-[150%] p-4 md:p-8 pb-[50vh] flex flex-col items-center">
-                      
-                      {/* TEXT VIEW */}
-                      {viewMode === 'text' && (
-                          <textarea 
-                              ref={textAreaRef}
-                              value={tabText}
-                              onChange={(e) => setTabText(e.target.value)}
-                              className="w-full bg-transparent text-gray-200 font-mono outline-none resize-none whitespace-pre border-none focus:ring-0 max-w-5xl mx-auto overflow-hidden"
-                              style={{ fontSize: `${zoomLevel}px`, lineHeight: '1.2' }}
-                              placeholder="Paste tab here or open a file..."
-                              spellCheck={false}
-                          />
-                      )}
+          {/* play line — where the eye should sit while scrolling */}
+          <div style={{ position: 'absolute', top: '30%', left: 4, right: 4, height: 1, background: `${PANEL.brass}66`, pointerEvents: 'none', zIndex: 10, boxShadow: `0 0 8px ${PANEL.brass}55` }} />
+          {/* phosphor scanlines + bottom fade */}
+          <div className="crt-scanline" style={{ position: 'absolute', inset: 4, borderRadius: 6, pointerEvents: 'none', opacity: 0.5, zIndex: 11 }} />
+          <div style={{ position: 'absolute', bottom: 4, left: 4, right: 4, height: 48, background: 'linear-gradient(180deg, transparent, rgba(0,0,0,0.55))', pointerEvents: 'none', zIndex: 11 }} />
+        </div>
+      </div>
 
-                      {/* IMAGE VIEW */}
-                      {viewMode === 'image' && (
-                          <div className="flex flex-col gap-4 w-full items-center">
-                              {imageUrls.map((url, i) => (
-                                  <img key={i} src={url} alt={`Tab Page ${i+1}`} className="shadow-2xl max-w-full" style={{ width: `${zoomLevel * 100}%` }} />
-                              ))}
-                          </div>
-                      )}
-
-                      {/* PDF VIEW */}
-                      {viewMode === 'pdf' && pdfDoc && (
-                          <div className="flex flex-col gap-4 w-full items-center">
-                              {Array.from({ length: pdfDoc.numPages }, (_, i) => (
-                                  <canvas key={i} ref={el => { canvasRefs.current[i] = el; }} className="shadow-2xl max-w-full bg-white" />
-                              ))}
-                          </div>
-                      )}
-
-                  </div>
-              </div>
-              
-              {/* Play Line */}
-              <div className="absolute top-[30%] left-0 right-0 h-[1px] bg-red-500/50 pointer-events-none z-10"></div>
-              <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-gray-900 to-transparent pointer-events-none"></div>
-          </div>
-       </div>
-    </div>
+    </SynthShell>
   );
 };
 

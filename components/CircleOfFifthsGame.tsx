@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, DragEvent, TouchEvent } from 'react';
 import { CIRCLE_OF_FIFTHS_ORDER } from '../services/audioUtils';
+import { SynthShell, Tabs, Engrave, PANEL } from './synthkit';
 
 interface CircleOfFifthsGameProps {
   onClose: () => void;
@@ -19,11 +20,11 @@ const CircleOfFifthsGame: React.FC<CircleOfFifthsGameProps> = ({ onClose }) => {
   const [slots, setSlots] = useState<(string | null)[]>(Array(12).fill(null));
   const [bank, setBank] = useState<string[]>([]);
   const [isWon, setIsWon] = useState(false);
-  
+
   // Drag State
   const [draggedItem, setDraggedItem] = useState<DragItem | null>(null);
   const [selectedItem, setSelectedItem] = useState<DragItem | null>(null); // For click-to-move
-  
+
   // Mobile Touch Drag Visuals
   const [touchDragPos, setTouchDragPos] = useState<{x: number, y: number} | null>(null);
 
@@ -83,9 +84,9 @@ const CircleOfFifthsGame: React.FC<CircleOfFifthsGameProps> = ({ onClose }) => {
 
       const newSlots = [...slots];
       newSlots[item.index] = null;
-      
+
       const newBank = [...bank, item.val];
-      
+
       setSlots(newSlots);
       setBank(newBank);
   };
@@ -95,7 +96,7 @@ const CircleOfFifthsGame: React.FC<CircleOfFifthsGameProps> = ({ onClose }) => {
       if (mode !== 'game') return;
       const item = { val, source, index };
       setDraggedItem(item);
-      setSelectedItem(item); 
+      setSelectedItem(item);
       e.dataTransfer.setData("text/plain", JSON.stringify(item));
       e.dataTransfer.effectAllowed = "move";
   };
@@ -140,7 +141,7 @@ const CircleOfFifthsGame: React.FC<CircleOfFifthsGameProps> = ({ onClose }) => {
 
   const handleTouchMove = (e: TouchEvent) => {
       if (!touchDragPos || mode !== 'game') return;
-      e.preventDefault(); 
+      e.preventDefault();
       const touch = e.touches[0];
       setTouchDragPos({ x: touch.clientX, y: touch.clientY });
   };
@@ -150,7 +151,7 @@ const CircleOfFifthsGame: React.FC<CircleOfFifthsGameProps> = ({ onClose }) => {
 
       const touch = e.changedTouches[0];
       const elements = document.elementsFromPoint(touch.clientX, touch.clientY);
-      
+
       const slotEl = elements.find(el => el.getAttribute('data-type') === 'slot');
       const bankEl = elements.find(el => el.getAttribute('data-type') === 'bank');
 
@@ -195,15 +196,15 @@ const CircleOfFifthsGame: React.FC<CircleOfFifthsGameProps> = ({ onClose }) => {
   // --- RENDER HELPERS ---
   const renderCircle = (isChart: boolean) => {
       const data = isChart ? CIRCLE_OF_FIFTHS_ORDER : slots;
-      
+
       return data.map((val, i) => {
-        // Calculate position
+        // Calculate position (math preserved — node centers sit on the brass ring)
         const angle = (i * 30) - 90; // -90 to start at top
         const radius = 40; // percent
         const rad = angle * (Math.PI / 180);
         const x = 50 + radius * Math.cos(rad);
         const y = 50 + radius * Math.sin(rad);
-        
+
         const isLocked = !isChart && i === 0;
 
         // Feedback Logic
@@ -211,165 +212,254 @@ const CircleOfFifthsGame: React.FC<CircleOfFifthsGameProps> = ({ onClose }) => {
         const isCorrect = val === expected;
         const isWrong = val && !isCorrect;
 
-        let bgColor = 'bg-blue-600';
-        let borderColor = 'border-blue-400';
+        // Roman-numeral engraving for the chart (I / V / IV around the wheel)
+        const roman = i === 0 ? 'I' : (i === 1 ? 'V' : (i === 11 ? 'IV' : ''));
 
-        if (isLocked || isChart) {
-            bgColor = 'bg-gray-800';
-            borderColor = 'border-gray-600';
-        } else if (mode === 'game') {
-            if (isCorrect) {
-                bgColor = 'bg-green-600';
-                borderColor = 'border-green-400';
-            } else if (isWrong) {
-                bgColor = 'bg-red-600';
-                borderColor = 'border-red-400';
+        // --- Vintage token styling ---
+        let tokenBg: string;
+        let ringColor: string;
+        let tokenInk: string;
+        let glow = 'none';
+
+        if (val) {
+            if (isLocked || isChart) {
+                // machined brass/wood token
+                tokenBg = 'linear-gradient(180deg,#3a2c18,#241a0e)';
+                ringColor = PANEL.brass;
+                tokenInk = PANEL.brassLite;
+                glow = '0 2px 5px rgba(0,0,0,0.5)';
+            } else if (isCorrect) {
+                // seated correctly — phosphor glow
+                tokenBg = 'linear-gradient(180deg,#2f3a1c,#1e2a12)';
+                ringColor = PANEL.phosphor;
+                tokenInk = PANEL.phosphor;
+                glow = `0 0 12px rgba(143,209,122,0.55)`;
+            } else {
+                // wrong seat — rust
+                tokenBg = 'linear-gradient(180deg,#3a1c1c,#2a1212)';
+                ringColor = '#a8472a';
+                tokenInk = '#e6b0a0';
+                glow = '0 2px 5px rgba(0,0,0,0.5)';
             }
+        } else {
+            // empty engraved socket (inset)
+            tokenBg = 'rgba(0,0,0,0.34)';
+            ringColor = selectedItem ? PANEL.brass : PANEL.line;
+            tokenInk = PANEL.inkMute;
         }
 
+        const isSelected = !!selectedItem && selectedItem.val === val && selectedItem.index === i && selectedItem.source === 'slot';
+
         return (
-            <div 
+            <div
                 key={i}
                 data-type="slot"
                 data-index={i}
-                className={`absolute w-12 h-12 -ml-6 -mt-6 rounded-full border-2 flex items-center justify-center text-sm font-bold shadow-lg transition-all z-10
-                    ${val 
-                        ? `${bgColor} ${borderColor} text-white cursor-grab active:cursor-grabbing` 
-                        : `bg-gray-900/80 border-dashed ${selectedItem ? 'border-yellow-400 bg-yellow-900/20' : 'border-gray-700'} hover:border-gray-500`
-                    }
-                    ${selectedItem && selectedItem.val === val && selectedItem.index === i && selectedItem.source === 'slot' ? 'ring-4 ring-yellow-400 scale-110' : ''}
-                `}
-                style={{ left: `${x}%`, top: `${y}%` }}
-                
+                style={{
+                    position: 'absolute',
+                    left: `${x}%`,
+                    top: `${y}%`,
+                    width: '17%',
+                    aspectRatio: '1 / 1',
+                    marginLeft: '-8.5%',
+                    marginTop: '-8.5%',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 10,
+                    cursor: val && !isLocked && !isChart ? 'grab' : (val ? 'default' : 'pointer'),
+                    fontFamily: '"DM Serif Display", serif',
+                    fontSize: 'clamp(13px, 4.6vw, 19px)',
+                    color: tokenInk,
+                    background: tokenBg,
+                    boxShadow: val
+                        ? `inset 0 0 0 1.5px ${ringColor}, inset 0 1px 0 rgba(255,255,255,0.08), ${glow}`
+                        : `inset 0 0 0 1px ${ringColor}, inset 0 2px 5px rgba(0,0,0,0.65)`,
+                    outline: isSelected ? `2px solid ${PANEL.brassLite}` : 'none',
+                    outlineOffset: 2,
+                    transition: 'box-shadow .15s, outline .12s',
+                }}
+
                 // DnD Handlers (Only active in game mode via check)
                 draggable={!!val && !isLocked && !isChart}
                 onDragStart={(e) => val && !isLocked && handleDragStart(e, val, 'slot', i)}
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={(e) => handleDropOnSlot(e, i)}
-                
+
                 onTouchStart={(e) => val && !isLocked && handleTouchStart(e, val, 'slot', i)}
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
-                
+
                 onClick={() => val && !isLocked ? handlePieceClick(val, 'slot', i) : handleSlotClick(i)}
             >
                 {val}
-                {isChart && (
-                   <div className="absolute -bottom-5 text-[8px] text-gray-500 uppercase font-normal pointer-events-none">
-                       {i === 0 ? 'I' : (i === 1 ? 'V' : (i === 11 ? 'IV' : ''))}
-                   </div>
+                {isChart && roman && (
+                   <span style={{
+                       position: 'absolute',
+                       bottom: '-42%',
+                       fontFamily: '"JetBrains Mono", monospace',
+                       fontSize: 8,
+                       letterSpacing: 1,
+                       color: PANEL.brass,
+                       textTransform: 'uppercase',
+                       pointerEvents: 'none',
+                   }}>
+                       {roman}
+                   </span>
                 )}
             </div>
         )
       });
   };
 
+  // 12 engraved tick marks on the brass ring (same angles as the nodes)
+  const ticks = Array.from({ length: 12 }, (_, i) => {
+      const rad = ((i * 30) - 90) * (Math.PI / 180);
+      const inner = 45.5, outer = 50;
+      return {
+          x1: 50 + inner * Math.cos(rad), y1: 50 + inner * Math.sin(rad),
+          x2: 50 + outer * Math.cos(rad), y2: 50 + outer * Math.sin(rad),
+      };
+  });
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-fade-in font-sans touch-none">
-      <div className="bg-gray-900 border border-gray-700 rounded-2xl w-full max-w-lg shadow-2xl relative flex flex-col h-[90vh] md:h-auto overflow-hidden">
-        
-        {/* Header */}
-        <div className="flex-none p-4 border-b border-gray-800 flex items-center justify-between">
-            <h2 className="text-xl md:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-500">
-                CIRCLE OF FIFTHS
-            </h2>
-            <button onClick={onClose} className="text-gray-500 hover:text-white">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-            </button>
+    <SynthShell name="Circle of Fifths" tag="Key Relationships · Chart & Drill" onClose={onClose} accent={PANEL.brass}>
+      <Tabs options={['Chart', 'Game']} value={mode === 'chart' ? 0 : 1} onChange={(i) => setMode(i === 0 ? 'chart' : 'game')} />
+
+      {/* intro line */}
+      <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 9.5, color: PANEL.inkMute, textAlign: 'center', lineHeight: 1.6 }}>
+        {mode === 'game'
+          ? <>Drag each key to its seat on the ring. <b style={{ color: PANEL.brassLite }}>C</b> is fixed at 12 o'clock — go clockwise in fifths.</>
+          : <>Adjacent keys are a <b style={{ color: PANEL.brassLite }}>perfect fifth</b> apart. Neighbors share the most notes — the backbone of key relationships.</>}
+      </span>
+
+      {/* ── The Wheel — brass ring on a phosphor screen ── */}
+      <div style={{ display: 'flex', justifyContent: 'center' }}>
+        <div style={{
+          position: 'relative',
+          width: '100%',
+          maxWidth: 300,
+          aspectRatio: '1 / 1',
+          borderRadius: '50%',
+          background: 'radial-gradient(circle at 50% 38%, #11160f 0%, #0a0d08 62%, #070907 100%)',
+          boxShadow: `inset 0 2px 16px rgba(0,0,0,0.9), 0 0 0 1px ${PANEL.brassDark}, 0 0 0 4px rgba(0,0,0,0.5)`,
+        }}>
+          {/* SVG backdrop: concentric brass rings + 12 engraved ticks. viewBox matches the % node math. */}
+          <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet" aria-hidden style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
+            <defs>
+              <linearGradient id="cof-brass-ring" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={PANEL.brassLite} />
+                <stop offset="50%" stopColor={PANEL.brass} />
+                <stop offset="100%" stopColor={PANEL.brassDark} />
+              </linearGradient>
+            </defs>
+            {/* faint phosphor grid arcs */}
+            <circle cx="50" cy="50" r="48.5" fill="none" stroke="url(#cof-brass-ring)" strokeWidth="0.9" opacity="0.95" />
+            <circle cx="50" cy="50" r="40" fill="none" stroke={PANEL.brass} strokeWidth="0.55" opacity="0.45" />
+            <circle cx="50" cy="50" r="31" fill="none" stroke="rgba(143,209,122,0.16)" strokeWidth="0.5" />
+            {/* spokes to each seat — subtle phosphor lines */}
+            {ticks.map((t, i) => (
+              <line key={`sp-${i}`} x1="50" y1="50" x2={t.x1} y2={t.y1} stroke="rgba(143,209,122,0.07)" strokeWidth="0.4" />
+            ))}
+            {/* 12 engraved tick marks on the brass ring */}
+            {ticks.map((t, i) => (
+              <line key={`tk-${i}`} x1={t.x1} y1={t.y1} x2={t.x2} y2={t.y2} stroke={PANEL.brass} strokeWidth="1" strokeLinecap="round" opacity="0.85" />
+            ))}
+          </svg>
+
+          {/* Center brass hub */}
+          <div style={{
+            position: 'absolute', inset: 0, margin: 'auto',
+            width: '34%', aspectRatio: '1 / 1', borderRadius: '50%',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: 6, zIndex: 5,
+            background: (isWon && mode === 'game')
+              ? `radial-gradient(circle at 40% 32%, #b8e6a6, ${PANEL.phosphor} 70%)`
+              : 'radial-gradient(circle at 40% 32%, #4a443c, #1a1510 72%)',
+            boxShadow: (isWon && mode === 'game')
+              ? `0 0 22px rgba(143,209,122,0.7), inset 0 1px 0 rgba(255,255,255,0.3)`
+              : `inset 0 1px 0 rgba(255,255,255,0.08), inset 0 0 0 1px ${PANEL.brassDark}, 0 2px 6px rgba(0,0,0,0.6)`,
+          }}>
+            {mode === 'chart' ? (
+              <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 8.5, letterSpacing: 2, lineHeight: 1.4, color: PANEL.brass, textTransform: 'uppercase' }}>Major<br/>Keys</span>
+            ) : isWon ? (
+              <span style={{ fontFamily: '"DM Serif Display", serif', fontSize: 16, color: '#0c1408' }}>Solved</span>
+            ) : (
+              <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 8, letterSpacing: 1.5, lineHeight: 1.4, color: PANEL.inkMute, textTransform: 'uppercase' }}>Arrange<br/>Clockwise</span>
+            )}
+          </div>
+
+          {renderCircle(mode === 'chart')}
         </div>
-
-        {/* Tabs */}
-        <div className="flex-none flex bg-gray-950 p-1">
-            <button 
-                onClick={() => setMode('chart')}
-                className={`flex-1 py-3 text-sm font-bold uppercase tracking-wider ${mode === 'chart' ? 'bg-gray-800 text-white' : 'text-gray-500 hover:text-gray-300'}`}
-            >
-                Reference Chart
-            </button>
-            <button 
-                onClick={() => setMode('game')}
-                className={`flex-1 py-3 text-sm font-bold uppercase tracking-wider ${mode === 'game' ? 'bg-yellow-600 text-black shadow-lg' : 'text-gray-500 hover:text-gray-300'}`}
-            >
-                Puzzle Game
-            </button>
-        </div>
-
-        <div className="flex-1 flex flex-col items-center p-4 overflow-y-auto">
-            {mode === 'game' && (
-                <p className="text-gray-400 text-xs mb-6 text-center max-w-xs">
-                    Drag notes to positions. C is fixed at the top.
-                </p>
-            )}
-            
-            {mode === 'chart' && (
-                <p className="text-gray-400 text-xs mb-6 text-center max-w-xs">
-                    The Circle of Fifths shows the relationship among the 12 tones of the chromatic scale.
-                </p>
-            )}
-
-            {/* The Circle */}
-            <div className="relative w-64 h-64 md:w-80 md:h-80 flex-shrink-0 mb-8 rounded-full border-4 border-gray-800 bg-gray-950/50 shadow-inner">
-                {/* Center Hub */}
-                <div className={`absolute inset-0 m-auto w-24 h-24 rounded-full flex items-center justify-center text-center p-2 z-0 transition-colors duration-500 ${isWon && mode === 'game' ? 'bg-green-500 text-black' : 'bg-gray-800 text-gray-500'}`}>
-                    {mode === 'chart' ? 
-                        <span className="font-bold text-gray-500 text-xs">MAJOR<br/>KEYS</span> :
-                        (isWon ? <span className="font-bold text-xl">SOLVED!</span> : <span className="text-[10px]">Arrange Clockwise</span>)
-                    }
-                </div>
-
-                {renderCircle(mode === 'chart')}
-            </div>
-
-            {/* The Bank (Game Mode Only) */}
-            {mode === 'game' && (
-                <div 
-                    data-type="bank"
-                    className={`w-full flex-1 bg-gray-800/50 rounded-xl p-4 border transition-colors overflow-y-auto flex flex-col ${selectedItem ? 'border-yellow-500/30' : 'border-gray-700'}`}
-                    onDragOver={(e) => e.preventDefault()}
-                    onDrop={handleDropOnBank}
-                    onClick={handleBankClick}
-                >
-                    <div className="flex flex-wrap gap-3 justify-center">
-                        {bank.length === 0 && !isWon && <div className="text-gray-500 text-sm mt-4">All pieces placed!</div>}
-                        {isWon && <div className="text-green-400 font-bold text-lg animate-bounce mt-4">Great Job!</div>}
-                        
-                        {bank.map((val, i) => (
-                            <div 
-                                key={`${val}-${i}`}
-                                className={`w-10 h-10 rounded-full bg-blue-600 border-2 border-blue-400 text-white flex items-center justify-center font-bold shadow-md cursor-grab active:cursor-grabbing hover:scale-110 transition-transform select-none
-                                    ${selectedItem && selectedItem.val === val && selectedItem.index === i && selectedItem.source === 'bank' ? 'ring-4 ring-yellow-400 scale-110' : ''}
-                                `}
-                                draggable
-                                onDragStart={(e) => handleDragStart(e, val, 'bank', i)}
-                                onTouchStart={(e) => handleTouchStart(e, val, 'bank', i)}
-                                onTouchMove={handleTouchMove}
-                                onTouchEnd={handleTouchEnd}
-                                onClick={(e) => { e.stopPropagation(); handlePieceClick(val, 'bank', i); }}
-                            >
-                                {val}
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-            
-            {/* Mobile Drag Ghost */}
-            {touchDragPos && draggedItem && (
-                <div 
-                    className="fixed w-12 h-12 rounded-full bg-blue-600 border-2 border-blue-400 text-white flex items-center justify-center font-bold shadow-2xl pointer-events-none z-[100] opacity-90"
-                    style={{ 
-                        left: touchDragPos.x, 
-                        top: touchDragPos.y,
-                        transform: 'translate(-50%, -50%) scale(1.2)'
-                    }}
-                >
-                    {draggedItem.val}
-                </div>
-            )}
-        </div>
-
       </div>
-    </div>
+
+      {/* ── The Bank (Game Mode Only) ── */}
+      {mode === 'game' && (
+        <>
+          <Engrave>Key Bank</Engrave>
+          <div
+              data-type="bank"
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={handleDropOnBank}
+              onClick={handleBankClick}
+              style={{
+                minHeight: 92, borderRadius: 10, padding: 12,
+                display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center', alignContent: 'flex-start',
+                background: 'rgba(0,0,0,0.25)',
+                boxShadow: `inset 0 0 0 1px ${selectedItem ? 'rgba(202,160,82,0.3)' : PANEL.line}`,
+              }}
+          >
+              {isWon ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, alignSelf: 'center' }}>
+                  <span style={{ fontFamily: '"DM Serif Display", serif', fontSize: 24, color: PANEL.phosphor, textShadow: `0 0 18px ${PANEL.phosphor}` }}>Great Job!</span>
+                  <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 9.5, letterSpacing: 1.5, color: PANEL.inkMute, textTransform: 'uppercase' }}>Circle complete</span>
+                </div>
+              ) : bank.length === 0 ? (
+                <span style={{ alignSelf: 'center', fontFamily: '"JetBrains Mono", monospace', fontSize: 11, color: PANEL.inkMute }}>All pieces placed — check the ring.</span>
+              ) : bank.map((val, i) => {
+                const sel = selectedItem && selectedItem.val === val && selectedItem.index === i && selectedItem.source === 'bank';
+                return (
+                  <div
+                      key={`${val}-${i}`}
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, val, 'bank', i)}
+                      onTouchStart={(e) => handleTouchStart(e, val, 'bank', i)}
+                      onTouchMove={handleTouchMove}
+                      onTouchEnd={handleTouchEnd}
+                      onClick={(e) => { e.stopPropagation(); handlePieceClick(val, 'bank', i); }}
+                      style={{
+                        minWidth: 46, padding: '11px 14px', borderRadius: 999, cursor: 'grab', userSelect: 'none',
+                        textAlign: 'center', fontFamily: '"DM Serif Display", serif', fontSize: 19, color: PANEL.ink,
+                        background: 'linear-gradient(180deg,#3a2c18,#241a0e)',
+                        boxShadow: sel
+                          ? `inset 0 0 0 2px ${PANEL.brassLite}, 0 0 12px rgba(202,160,82,0.4)`
+                          : `inset 0 0 0 1px ${PANEL.brassDark}, 0 2px 4px rgba(0,0,0,0.4)`,
+                      }}
+                  >
+                      {val}
+                  </div>
+                );
+              })}
+          </div>
+        </>
+      )}
+
+      {/* Mobile Drag Ghost */}
+      {touchDragPos && draggedItem && (
+        <div
+            style={{
+              position: 'fixed', left: touchDragPos.x, top: touchDragPos.y,
+              transform: 'translate(-50%, -50%) scale(1.1)', pointerEvents: 'none', zIndex: 200,
+              minWidth: 46, padding: '10px 14px', borderRadius: 999, textAlign: 'center',
+              fontFamily: '"DM Serif Display", serif', fontSize: 19, color: '#1a0d04',
+              background: `linear-gradient(180deg,${PANEL.brassLite},${PANEL.brass})`,
+              boxShadow: '0 8px 20px rgba(0,0,0,0.6)',
+            }}
+        >
+            {draggedItem.val}
+        </div>
+      )}
+    </SynthShell>
   );
 };
 

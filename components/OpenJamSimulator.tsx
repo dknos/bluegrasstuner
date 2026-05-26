@@ -35,6 +35,7 @@ const STYLES: StrumStyle[] = ['Bluegrass', 'Boom-Chuck', 'Waltz', 'Swing', 'Slo-
 const STYLE_LABELS = ['Grass', 'Boom', 'Waltz', 'Swing', 'Rock'];
 const MIXES = ['GUITAR', 'FULL', 'BASS'] as const;
 const MIX_LABELS = ['Gtr', 'Full', 'Bass'];
+const JAM_KEYS = ['G', 'C', 'D', 'A', 'E', 'F', 'Bb', 'Am', 'Em', 'Bm']; // bluegrass-common keys
 
 const getRootFromRoman = (roman: string, key: string): string => {
     const scale = (key.includes('b') || key === 'F') ? NOTES_FLAT : NOTES_SHARP;
@@ -390,14 +391,19 @@ const OpenJamSimulator: React.FC<OpenJamSimulatorProps> = ({ onClose }) => {
             fontSize: 12, fontWeight: 700, color: PANEL.ink, background: '#181410', border: `1px solid ${PANEL.line}`,
         }}>{label}</button>
     );
-    const selStyle: React.CSSProperties = {
-        background: '#181410', color: PANEL.ink, border: `1px solid ${PANEL.line}`, borderRadius: 7,
-        padding: '9px 8px', fontFamily: '"JetBrains Mono", monospace', fontSize: 12.5, outline: 'none', appearance: 'none',
+    const cycleSong = (dir: number) => { setIsPlaying(false); setSelectedSongIndex((i) => (i + dir + SONG_LIBRARY.length) % SONG_LIBRARY.length); };
+    const deckBtn: React.CSSProperties = {
+        flex: '0 0 auto', width: 38, height: 38, borderRadius: 9, cursor: 'pointer', border: 'none',
+        background: '#181410', color: PANEL.brassLite, fontSize: 13, boxShadow: `inset 0 0 0 1px ${PANEL.line}`,
     };
-    const numStyle: React.CSSProperties = {
-        width: 48, textAlign: 'center', background: '#181410', color: PANEL.ink, border: `1px solid ${PANEL.line}`,
-        borderRadius: 6, padding: '5px 0', fontFamily: '"JetBrains Mono", monospace', fontSize: 12,
-    };
+    // brass −/+ stepper (replaces the cheap native number inputs)
+    const Stepper: React.FC<{ value: number; min: number; max: number; onChange: (v: number) => void; suffix?: string }> = ({ value, min, max, onChange, suffix }) => (
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            <button onClick={() => onChange(Math.max(min, value - 1))} style={{ width: 26, height: 26, borderRadius: 6, border: 'none', cursor: 'pointer', background: '#181410', color: PANEL.brassLite, fontSize: 14, boxShadow: `inset 0 0 0 1px ${PANEL.line}` }}>−</button>
+            <span style={{ minWidth: 26, textAlign: 'center', fontFamily: '"JetBrains Mono", monospace', fontSize: 13, color: PANEL.ink }}>{value}{suffix}</span>
+            <button onClick={() => onChange(Math.min(max, value + 1))} style={{ width: 26, height: 26, borderRadius: 6, border: 'none', cursor: 'pointer', background: '#181410', color: PANEL.brassLite, fontSize: 14, boxShadow: `inset 0 0 0 1px ${PANEL.line}` }}>+</button>
+        </span>
+    );
 
     return (
         <div onClick={onClose} style={{
@@ -510,16 +516,28 @@ const OpenJamSimulator: React.FC<OpenJamSimulatorProps> = ({ onClose }) => {
                         </div>
 
                         {/* ── SETUP ───────────────────────────────────────────── */}
-                        <Engrave>Tune</Engrave>
-                        <div style={{ display: 'flex', gap: 8 }}>
-                            <select value={selectedSongIndex} onChange={(e) => { setIsPlaying(false); setSelectedSongIndex(Number(e.target.value)); }}
-                                style={{ ...selStyle, flex: 1 }}>
-                                {SONG_LIBRARY.map((s, i) => <option key={i} value={i}>{s.title}</option>)}
-                            </select>
-                            <select value={selectedKey} onChange={(e) => { setIsPlaying(false); setSelectedKey(e.target.value); }} style={{ ...selStyle, width: 78 }}>
-                                {NOTES_SHARP.map(n => <option key={n} value={n}>{n}</option>)}
-                                <option value="Am">Am</option><option value="Em">Em</option><option value="Bm">Bm</option>
-                            </select>
+                        <Engrave>Song</Engrave>
+                        {/* tape-deck song selector (no cheap native dropdown) */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 9, background: '#141009', boxShadow: `inset 0 0 0 1px ${PANEL.line}` }}>
+                            <button onClick={() => cycleSong(-1)} style={deckBtn} aria-label="Previous song">◀</button>
+                            <div style={{ flex: 1, textAlign: 'center', minWidth: 0 }}>
+                                <div style={{ fontFamily: '"DM Serif Display", serif', fontSize: 19, color: PANEL.ink, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{SONG_LIBRARY[selectedSongIndex].title}</div>
+                                <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 8, letterSpacing: 1.5, color: PANEL.inkMute, textTransform: 'uppercase' }}>{selectedSongIndex + 1} / {SONG_LIBRARY.length} · {SONG_LIBRARY[selectedSongIndex].style}</div>
+                            </div>
+                            <button onClick={() => cycleSong(1)} style={deckBtn} aria-label="Next song">▶</button>
+                        </div>
+
+                        <Engrave>Key</Engrave>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                            {JAM_KEYS.map((k) => (
+                                <button key={k} onClick={() => { setIsPlaying(false); setSelectedKey(k); }} style={{
+                                    flex: '1 1 calc(20% - 5px)', minWidth: 42, padding: '9px 0', borderRadius: 7, border: 'none', cursor: 'pointer',
+                                    fontFamily: '"DM Serif Display", serif', fontSize: 15,
+                                    background: selectedKey === k ? `linear-gradient(180deg,${PANEL.brassLite},${PANEL.brass})` : '#181410',
+                                    color: selectedKey === k ? '#1a0d04' : PANEL.ink,
+                                    boxShadow: selectedKey === k ? `0 0 12px rgba(202,160,82,0.4)` : `inset 0 0 0 1px ${PANEL.line}`,
+                                }}>{k}</button>
+                            ))}
                         </div>
 
                         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
@@ -527,36 +545,32 @@ const OpenJamSimulator: React.FC<OpenJamSimulatorProps> = ({ onClose }) => {
                             <Rocker label="Mix" options={MIX_LABELS} value={MIXES.indexOf(instrumentMix)} onChange={(i) => setInstrumentMix(MIXES[i])} />
                         </div>
 
-                        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                            {/* count-in */}
+                        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'stretch' }}>
                             <button onClick={() => setUseCountIn(v => !v)} style={{
-                                flex: '1 1 120px', padding: '9px 10px', borderRadius: 7, cursor: 'pointer', fontFamily: '"JetBrains Mono", monospace',
+                                flex: '1 1 110px', padding: '9px 10px', borderRadius: 7, cursor: 'pointer', fontFamily: '"JetBrains Mono", monospace',
                                 fontSize: 10.5, letterSpacing: 1, textTransform: 'uppercase', color: useCountIn ? '#1a0d04' : PANEL.inkMute,
                                 background: useCountIn ? PANEL.brass : '#181410', border: `1px solid ${PANEL.line}`,
                             }}>Count-In {useCountIn ? 'On' : 'Off'}</button>
-                            {/* loop */}
-                            <div style={{ flex: '1 1 150px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '5px 8px', borderRadius: 7, background: '#141009', boxShadow: `inset 0 0 0 1px ${PANEL.line}` }}>
+                            <div style={{ flex: '1 1 180px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '6px 10px', borderRadius: 7, background: '#141009', boxShadow: `inset 0 0 0 1px ${PANEL.line}` }}>
                                 <span style={{ fontSize: 9, color: PANEL.inkMute, letterSpacing: 1, textTransform: 'uppercase' }}>Loop</span>
-                                <input type="number" min={1} max={resolvedProg.length} value={loopStart} onChange={(e) => setLoopStart(Math.max(1, Number(e.target.value)))} style={numStyle} />
+                                <Stepper value={loopStart} min={1} max={resolvedProg.length || 16} onChange={(v) => setLoopStart(Math.min(v, loopEnd))} />
                                 <span style={{ color: PANEL.inkMute }}>–</span>
-                                <input type="number" min={1} max={resolvedProg.length} value={loopEnd} onChange={(e) => setLoopEnd(Number(e.target.value))} style={numStyle} />
+                                <Stepper value={loopEnd} min={1} max={resolvedProg.length || 16} onChange={(v) => setLoopEnd(Math.max(v, loopStart))} />
                             </div>
                         </div>
 
-                        {/* auto-speedup */}
                         <div style={{ borderRadius: 8, background: '#141009', boxShadow: `inset 0 0 0 1px ${PANEL.line}`, padding: '10px 12px' }}>
                             <button onClick={() => setAutoSpeedup(v => !v)} style={{
-                                display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer',
-                                background: 'transparent', border: 'none', padding: 0,
+                                display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', background: 'transparent', border: 'none', padding: 0,
                             }}>
                                 <span style={{ fontSize: 10.5, letterSpacing: 1, textTransform: 'uppercase', color: PANEL.ink }}>Auto-Speedup</span>
                                 <span style={{ width: 40, height: 22, borderRadius: 999, position: 'relative', background: autoSpeedup ? PANEL.brass : '#181410', boxShadow: `inset 0 0 0 1px ${PANEL.line}` }}>
                                     <span style={{ position: 'absolute', top: 2, left: autoSpeedup ? 20 : 2, width: 18, height: 18, borderRadius: 999, background: autoSpeedup ? '#1a0d04' : PANEL.inkMute, transition: 'left .12s' }} />
                                 </span>
                             </button>
-                            <div style={{ display: autoSpeedup ? 'flex' : 'none', gap: 14, marginTop: 10, fontSize: 11, color: PANEL.inkMute }}>
-                                <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>+<input type="number" value={speedupAmount} onChange={(e) => setSpeedupAmount(Number(e.target.value))} style={numStyle} /> bpm</label>
-                                <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>every<input type="number" value={speedupInterval} onChange={(e) => setSpeedupInterval(Number(e.target.value))} style={numStyle} /> bars</label>
+                            <div style={{ display: autoSpeedup ? 'flex' : 'none', gap: 16, marginTop: 12, alignItems: 'center', fontSize: 10, color: PANEL.inkMute, letterSpacing: 1, textTransform: 'uppercase' }}>
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>+<Stepper value={speedupAmount} min={1} max={30} onChange={setSpeedupAmount} /> bpm</span>
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>every<Stepper value={speedupInterval} min={1} max={32} onChange={setSpeedupInterval} /> bars</span>
                             </div>
                         </div>
                     </div>

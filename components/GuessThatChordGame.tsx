@@ -1,6 +1,10 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { CHORD_QUIZ_DATA, ChordQuizItem, playTone } from '../services/audioUtils';
+import { SynthShell, ChoiceButton, StatChip, Engrave, PANEL } from './synthkit';
+
+const SERIF = '"DM Serif Display", serif';
+const MONO = '"JetBrains Mono", monospace';
 
 interface GuessThatChordGameProps {
   onClose: () => void;
@@ -47,117 +51,142 @@ const GuessThatChordGame: React.FC<GuessThatChordGameProps> = ({ onClose }) => {
 
   const handleGuess = (guessedName: string) => {
     if (!currentChord) return;
-    
+
     setSelectedAnswer(guessedName);
     const correct = guessedName === currentChord.name;
     setIsCorrect(correct);
     setGameState('result');
   };
 
+  // ── shared "recessed phosphor screen" wrapper (Scope-style, no analyser) ──
+  const Screen: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+    <div style={{
+      borderRadius: 8, overflow: 'hidden', padding: '20px 16px', minHeight: 132,
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10,
+      background: PANEL.screen,
+      boxShadow: `inset 0 2px 10px rgba(0,0,0,0.9), 0 0 0 1px ${PANEL.brassDark}, 0 0 0 3px rgba(0,0,0,0.5)`,
+      backgroundImage: 'repeating-linear-gradient(0deg, rgba(143,209,122,0.05) 0 1px, transparent 1px 4px)',
+    }}>{children}</div>
+  );
+
+  // ── big brass transport button (PLAY / REPLAY / NEXT) ──
+  const BrassButton: React.FC<{ onClick: () => void; children: React.ReactNode }> = ({ onClick, children }) => (
+    <button onClick={onClick} style={{
+      width: '100%', padding: '16px 0', borderRadius: 11, cursor: 'pointer', touchAction: 'none',
+      fontFamily: SERIF, fontSize: 21, letterSpacing: 2.5, textTransform: 'uppercase',
+      border: `2px solid ${PANEL.brass}`, color: '#1a0d04',
+      background: `linear-gradient(180deg, ${PANEL.brassLite}, ${PANEL.brass})`,
+      boxShadow: `0 0 22px rgba(202,160,82,0.4), inset 0 1px 0 rgba(255,255,255,0.35)`,
+      transition: 'all .08s',
+    }}>{children}</button>
+  );
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-fade-in">
-      <div className="bg-gray-900 border border-gray-700 rounded-2xl p-6 w-full max-w-md shadow-2xl relative">
-        
-        {/* Close Button */}
-        <button 
-            onClick={onClose}
-            className="absolute top-4 right-4 text-gray-500 hover:text-white"
-        >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-        </button>
+    <SynthShell name="Chord Quiz" tag="Ear Training · Chords" onClose={onClose} accent={PANEL.brass}>
 
-        <h2 className="text-2xl font-black text-center mb-6 text-transparent bg-clip-text bg-gradient-to-r from-neon-blue to-purple-500">
-            GUESS THAT CHORD
-        </h2>
+      {/* ── START ─────────────────────────────────────────── */}
+      {gameState === 'start' && (
+        <>
+          <Engrave>Ear Training</Engrave>
+          <Screen>
+            <span style={{ fontFamily: SERIF, fontSize: 40, color: PANEL.phosphor, textShadow: `0 0 18px ${PANEL.phosphor}`, lineHeight: 1 }}>♪</span>
+            <span style={{ fontFamily: MONO, fontSize: 10.5, color: PANEL.inkMute, textAlign: 'center', lineHeight: 1.7, maxWidth: 260 }}>
+              Three notes play in sequence. Name the chord they belong to.
+            </span>
+          </Screen>
+          <BrassButton onClick={startNewRound}>▶ Play Chord</BrassButton>
+        </>
+      )}
 
-        {gameState === 'start' && (
-            <div className="flex flex-col items-center justify-center space-y-6 py-8">
-                <p className="text-gray-400 text-center max-w-xs">
-                    Listen to three notes played in sequence and guess which chord they belong to.
-                </p>
-                <div className="w-16 h-16 rounded-full bg-gray-800 flex items-center justify-center mb-2 animate-pulse">
-                    <span className="text-3xl">♪</span>
-                </div>
-                <button 
-                    onClick={startNewRound}
-                    className="px-8 py-3 bg-neon-blue hover:bg-cyan-400 text-black font-black rounded-full shadow-[0_0_20px_rgba(0,243,255,0.4)] transition-transform active:scale-95 text-xl"
-                >
-                    START GAME
-                </button>
+      {/* ── PLAYING (chord sounding) ──────────────────────── */}
+      {gameState === 'playing' && (
+        <>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 10 }}>
+            <StatChip label="Status" value="Listen" accent={PANEL.phosphor} />
+            <StatChip label="Note" value={`${countdown || '–'}/3`} accent={PANEL.brassLite} />
+          </div>
+          <Screen>
+            <span style={{ fontFamily: MONO, fontSize: 10, letterSpacing: 3, color: PANEL.phosphor, textTransform: 'uppercase', textShadow: `0 0 10px ${PANEL.phosphor}` }}>
+              Listening
+            </span>
+            <div style={{ display: 'flex', gap: 14 }}>
+              {[1, 2, 3].map((n, i) => (
+                <div key={i} style={{
+                  width: 16, height: 16, borderRadius: 999, transition: 'all .2s',
+                  background: countdown === n ? PANEL.phosphor : 'transparent',
+                  boxShadow: countdown === n
+                    ? `0 0 14px ${PANEL.phosphor}, inset 0 0 0 1px ${PANEL.phosphor}`
+                    : `inset 0 0 0 1px rgba(143,209,122,0.3)`,
+                }} />
+              ))}
             </div>
-        )}
+            <span style={{ fontFamily: MONO, fontSize: 8.5, color: PANEL.inkMute, letterSpacing: 1.5 }}>3 notes · 1s each</span>
+          </Screen>
+        </>
+      )}
 
-        {gameState === 'playing' && (
-            <div className="flex flex-col items-center justify-center h-48 space-y-4">
-                <div className="text-neon-blue text-sm font-bold tracking-widest animate-pulse">
-                    LISTENING...
-                </div>
-                <div className="flex gap-4">
-                    {[1, 2, 3].map((n, i) => (
-                        <div key={i} className={`w-4 h-4 rounded-full transition-all duration-300 ${countdown === n ? 'bg-neon-blue scale-125' : 'bg-gray-700'}`}></div>
-                    ))}
-                </div>
-                <p className="text-gray-400 text-xs mt-2">Playing notes (1s each)</p>
+      {/* ── GUESSING (pick an answer) ─────────────────────── */}
+      {gameState === 'guessing' && (
+        <>
+          <Engrave>Which chord was that?</Engrave>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {options.map((opt) => (
+              <div key={opt.name} style={{ flex: '1 1 calc(50% - 8px)', minWidth: 130 }}>
+                <ChoiceButton label={opt.name} state="idle" onClick={() => handleGuess(opt.name)} />
+              </div>
+            ))}
+          </div>
+          <BrassButton onClick={() => currentChord && playChordSequence(currentChord)}>↻ Replay</BrassButton>
+        </>
+      )}
+
+      {/* ── RESULT (reveal + feedback) ────────────────────── */}
+      {gameState === 'result' && currentChord && (
+        <>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 10 }}>
+            <StatChip label="Result" value={isCorrect ? 'Correct' : 'Miss'} accent={isCorrect ? PANEL.phosphor : '#a8472a'} />
+          </div>
+
+          <Screen>
+            <span style={{ fontFamily: MONO, fontSize: 8.5, letterSpacing: 2.5, color: PANEL.inkMute, textTransform: 'uppercase' }}>The chord was</span>
+            <span style={{ fontFamily: SERIF, fontSize: 38, color: PANEL.phosphor, textShadow: `0 0 18px ${PANEL.phosphor}`, lineHeight: 1 }}>{currentChord.name}</span>
+            <div style={{ display: 'flex', gap: 8, marginTop: 2 }}>
+              {currentChord.noteNames.map((n, i) => (
+                <div key={i} style={{
+                  minWidth: 38, padding: '7px 0', borderRadius: 7, textAlign: 'center',
+                  fontFamily: MONO, fontSize: 13, color: PANEL.phosphor,
+                  background: 'rgba(143,209,122,0.08)', boxShadow: `inset 0 0 0 1px rgba(143,209,122,0.3)`,
+                }}>{n}</div>
+              ))}
             </div>
-        )}
+          </Screen>
 
-        {gameState === 'guessing' && (
-            <div className="flex flex-col space-y-4">
-                <div className="text-center text-gray-300 mb-4">Which chord was that?</div>
-                <div className="grid grid-cols-1 gap-3">
-                    {options.map((opt) => (
-                        <button
-                            key={opt.name}
-                            onClick={() => handleGuess(opt.name)}
-                            className="p-4 rounded-xl bg-gray-800 hover:bg-gray-700 border border-gray-600 hover:border-neon-blue transition-all font-bold text-lg text-white"
-                        >
-                            {opt.name}
-                        </button>
-                    ))}
+          {/* options re-shown with correct / wrong / disabled feedback */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {options.map((opt) => {
+              const state: 'idle' | 'correct' | 'wrong' =
+                opt.name === currentChord.name ? 'correct'
+                : (!isCorrect && opt.name === selectedAnswer) ? 'wrong'
+                : 'idle';
+              return (
+                <div key={opt.name} style={{ flex: '1 1 calc(50% - 8px)', minWidth: 130 }}>
+                  <ChoiceButton label={opt.name} state={state} disabled />
                 </div>
-                <button 
-                    onClick={() => currentChord && playChordSequence(currentChord)}
-                    className="mt-4 text-xs text-gray-500 hover:text-white underline text-center w-full"
-                >
-                    Replay Audio
-                </button>
-            </div>
-        )}
+              );
+            })}
+          </div>
 
-        {gameState === 'result' && currentChord && (
-            <div className="flex flex-col items-center space-y-6">
-                <div className={`text-6xl ${isCorrect ? 'text-green-500' : 'text-red-500'} mb-2`}>
-                    {isCorrect ? '✓' : '✗'}
-                </div>
-                
-                <div className="text-center">
-                    <p className="text-gray-400 text-sm uppercase tracking-wider mb-1">The chord was</p>
-                    <h3 className="text-3xl font-black text-white">{currentChord.name}</h3>
-                </div>
+          {!isCorrect && selectedAnswer && (
+            <span style={{ fontFamily: MONO, fontSize: 10, color: '#e6b0a0', textAlign: 'center', letterSpacing: 0.5 }}>
+              You guessed {selectedAnswer}
+            </span>
+          )}
 
-                <div className="flex gap-3 justify-center">
-                    {currentChord.noteNames.map((n, i) => (
-                        <div key={i} className="w-12 h-12 rounded-full border border-gray-600 bg-gray-800 flex items-center justify-center font-bold text-neon-blue shadow-lg">
-                            {n}
-                        </div>
-                    ))}
-                </div>
+          <BrassButton onClick={startNewRound}>▶ Next Chord</BrassButton>
+        </>
+      )}
 
-                {!isCorrect && selectedAnswer && (
-                    <p className="text-red-400 text-sm">You guessed: {selectedAnswer}</p>
-                )}
-
-                <button 
-                    onClick={startNewRound}
-                    className="w-full py-3 bg-neon-blue hover:bg-cyan-400 text-black font-bold rounded-xl shadow-lg shadow-neon-blue/20 transition-transform active:scale-95"
-                >
-                    NEXT CHORD
-                </button>
-            </div>
-        )}
-
-      </div>
-    </div>
+    </SynthShell>
   );
 };
 

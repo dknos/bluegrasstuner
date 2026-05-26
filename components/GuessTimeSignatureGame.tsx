@@ -1,9 +1,13 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { SynthShell, ChoiceButton, StatChip, Engrave, PANEL } from './synthkit';
 
 interface GuessTimeSignatureGameProps {
   onClose: () => void;
 }
+
+const SERIF = '"DM Serif Display", Georgia, serif';
+const MONO = '"JetBrains Mono", ui-monospace, monospace';
 
 const TIME_SIG_OPTIONS = [
     { label: "3/4", beats: 3 },
@@ -31,11 +35,11 @@ const GuessTimeSignatureGame: React.FC<GuessTimeSignatureGameProps> = ({ onClose
     // Pick Random Time Signature
     const randomIdx = Math.floor(Math.random() * TIME_SIG_OPTIONS.length);
     const correct = TIME_SIG_OPTIONS[randomIdx];
-    
+
     setTargetSig(correct);
     setSelectedAnswer(null);
     setGameState('playing');
-    
+
     // Play for 2 measures
     playClickTrack(correct.beats, 2);
   }, []);
@@ -50,13 +54,13 @@ const GuessTimeSignatureGame: React.FC<GuessTimeSignatureGameProps> = ({ onClose
     isPlayingRef.current = true;
     nextNoteTimeRef.current = ctx.currentTime + 0.1;
     beatCountRef.current = 0;
-    
+
     const totalBeats = beatsPerBar * barsToPlay;
     const tempo = 100; // Fixed tempo for consistency
 
     const schedule = () => {
         if (!isPlayingRef.current) return;
-        
+
         while (nextNoteTimeRef.current < ctx.currentTime + 0.1) {
             if (beatCountRef.current >= totalBeats) {
                 isPlayingRef.current = false;
@@ -93,7 +97,7 @@ const GuessTimeSignatureGame: React.FC<GuessTimeSignatureGameProps> = ({ onClose
         }
         timerIDRef.current = window.setTimeout(schedule, 25);
     };
-    
+
     schedule();
   };
 
@@ -114,95 +118,148 @@ const GuessTimeSignatureGame: React.FC<GuessTimeSignatureGameProps> = ({ onClose
       return () => stopAudio();
   }, []);
 
+  // ── presentation helpers (no state) ──────────────────────────────────────
+  // During 'playing' we know the bar length (targetSig.beats); in 'guessing'
+  // it is hidden until the player commits a guess. Render a phosphor meter
+  // strip of cells, lighting the active beat and flaring the downbeat.
+  const meterCells = gameState === 'playing' ? targetSig.beats : 0;
+  const statusText =
+    gameState === 'start' ? 'Standby'
+    : gameState === 'playing' ? 'Listening'
+    : gameState === 'guessing' ? 'Your Call'
+    : isCorrect ? 'Correct' : 'Missed';
+  const statusAccent =
+    gameState === 'result' ? (isCorrect ? PANEL.phosphor : '#a8472a') : PANEL.ink;
+
+  // shared brass action button
+  const BrassButton: React.FC<{ label: string; onClick: () => void }> = ({ label, onClick }) => (
+    <button onClick={onClick} style={{
+      width: '100%', padding: '16px 0', borderRadius: 11, cursor: 'pointer',
+      border: `2px solid ${PANEL.brassDark}`,
+      fontFamily: MONO, fontSize: 13, letterSpacing: 3, textTransform: 'uppercase', fontWeight: 700,
+      color: '#1a0d04', background: `linear-gradient(180deg,${PANEL.brassLite},${PANEL.brass})`,
+      boxShadow: `0 0 20px rgba(202,160,82,0.32), inset 0 1px 0 rgba(255,255,255,0.35), 0 3px 6px rgba(0,0,0,0.45)`,
+    }}>{label}</button>
+  );
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-fade-in">
-      <div className="bg-gray-900 border border-gray-700 rounded-2xl p-6 w-full max-w-md shadow-2xl relative">
-        <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-white">✕</button>
+    <SynthShell name="Time Signature" tag="Ear Training · Meter" onClose={onClose} accent={PANEL.brass}>
 
-        <h2 className="text-2xl font-black text-center mb-6 text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-500 uppercase tracking-widest">
-            GUESS THE SIGNATURE
-        </h2>
+      {/* ── phosphor meter readout (recessed screen) ── */}
+      <div style={{
+        position: 'relative', borderRadius: 8, padding: '14px 12px',
+        background: PANEL.screen,
+        boxShadow: `inset 0 2px 10px rgba(0,0,0,0.9), 0 0 0 1px ${PANEL.brassDark}, 0 0 0 3px rgba(0,0,0,0.5)`,
+        display: 'flex', flexDirection: 'column', gap: 12, minHeight: 118, justifyContent: 'center',
+      }}>
+        {/* faint screen scanlines */}
+        <div style={{ position: 'absolute', inset: 0, borderRadius: 8, pointerEvents: 'none',
+          backgroundImage: 'repeating-linear-gradient(0deg, rgba(0,0,0,0.32) 0px, rgba(0,0,0,0.32) 1px, transparent 1px, transparent 3px)' }} />
 
-        {gameState === 'start' && (
-            <div className="flex flex-col items-center justify-center space-y-6 py-8">
-                <p className="text-gray-400 text-center max-w-xs">
-                    Listen to the click track accents and determine the Time Signature.
-                </p>
-                <div className="w-16 h-16 rounded-full bg-gray-800 flex items-center justify-center mb-2 animate-pulse">
-                    <span className="text-3xl">🎼</span>
-                </div>
-                <button 
-                    onClick={startNewRound}
-                    className="px-8 py-3 bg-indigo-500 hover:bg-indigo-400 text-white font-black rounded-full shadow-[0_0_20px_rgba(99,102,241,0.4)] transition-transform active:scale-95 text-xl"
-                >
-                    START GAME
-                </button>
-            </div>
-        )}
+        {/* status line */}
+        <div style={{ position: 'relative', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ fontFamily: MONO, fontSize: 8.5, letterSpacing: 2.5, textTransform: 'uppercase', color: 'rgba(143,209,122,0.55)' }}>Meter</span>
+          <span style={{ fontFamily: MONO, fontSize: 9.5, letterSpacing: 1.5, textTransform: 'uppercase', color: statusAccent, textShadow: gameState === 'playing' ? '0 0 8px rgba(143,209,122,0.6)' : 'none' }}>{statusText}</span>
+        </div>
 
-        {gameState === 'playing' && (
-            <div className="flex flex-col items-center justify-center h-48 space-y-6">
-                <div className="text-indigo-400 text-sm font-bold tracking-widest animate-pulse">
-                    LISTENING...
-                </div>
-                <div className="w-full flex justify-center gap-2">
-                    {/* Visual Beat Indicator */}
-                    <div className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl font-black transition-all ${currentBeat === 1 ? 'bg-indigo-500 text-white scale-110 shadow-lg' : 'bg-gray-800 text-gray-500'}`}>
-                        {currentBeat || '-'}
-                    </div>
-                </div>
-                <p className="text-gray-500 text-xs">Count the beats per measure!</p>
-            </div>
-        )}
-
-        {gameState === 'guessing' && (
-            <div className="flex flex-col space-y-4">
-                <div className="text-center text-gray-300 mb-4">What was the time signature?</div>
-                <div className="grid grid-cols-2 gap-3">
-                    {TIME_SIG_OPTIONS.map((opt) => (
-                        <button
-                            key={opt.label}
-                            onClick={() => handleGuess(opt.label)}
-                            className="p-4 rounded-xl bg-gray-800 hover:bg-gray-700 border border-gray-600 hover:border-indigo-500 transition-all font-bold text-lg text-white"
-                        >
-                            {opt.label}
-                        </button>
-                    ))}
-                </div>
-                <button 
-                    onClick={() => playClickTrack(targetSig.beats, 2)}
-                    className="mt-4 text-xs text-gray-500 hover:text-white underline text-center w-full"
-                >
-                    Replay Audio
-                </button>
-            </div>
-        )}
-
-        {gameState === 'result' && (
-            <div className="flex flex-col items-center space-y-6">
-                <div className={`text-6xl ${isCorrect ? 'text-green-500' : 'text-red-500'} mb-2`}>
-                    {isCorrect ? '✓' : '✗'}
-                </div>
-                
-                <div className="text-center">
-                    <p className="text-gray-400 text-sm uppercase tracking-wider mb-1">Correct Signature</p>
-                    <h3 className="text-4xl font-black text-white">{targetSig.label}</h3>
-                </div>
-
-                {!isCorrect && selectedAnswer && (
-                    <p className="text-red-400 text-sm">You guessed: {selectedAnswer}</p>
-                )}
-
-                <button 
-                    onClick={startNewRound}
-                    className="w-full py-3 bg-indigo-500 hover:bg-indigo-400 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/20 transition-transform active:scale-95"
-                >
-                    NEXT ROUND
-                </button>
-            </div>
+        {/* beat cells / reveal */}
+        {gameState === 'result' ? (
+          <div style={{ position: 'relative', textAlign: 'center' }}>
+            <span style={{ fontFamily: SERIF, fontSize: 52, lineHeight: 1, color: isCorrect ? PANEL.phosphor : '#e6b0a0', textShadow: isCorrect ? `0 0 22px ${PANEL.phosphor}` : '0 0 16px rgba(168,71,42,0.7)' }}>{targetSig.label}</span>
+          </div>
+        ) : (
+          <div style={{ position: 'relative', display: 'flex', gap: 7, justifyContent: 'center', alignItems: 'center', minHeight: 44 }}>
+            {meterCells > 0 ? (
+              Array.from({ length: meterCells }).map((_, i) => {
+                const beatNum = i + 1;
+                const lit = currentBeat === beatNum;
+                const downbeat = beatNum === 1;
+                return (
+                  <div key={i} style={{
+                    width: downbeat ? 34 : 26, height: 40, borderRadius: 5,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontFamily: MONO, fontSize: 12, fontWeight: 700,
+                    color: lit ? '#0c0f0a' : (downbeat ? 'rgba(240,213,127,0.7)' : 'rgba(143,209,122,0.4)'),
+                    background: lit
+                      ? (downbeat ? PANEL.brassLite : PANEL.phosphor)
+                      : 'rgba(143,209,122,0.06)',
+                    boxShadow: lit
+                      ? (downbeat ? `0 0 18px ${PANEL.brassLite}, inset 0 0 0 1px rgba(255,255,255,0.4)` : `0 0 14px ${PANEL.phosphor}`)
+                      : `inset 0 0 0 1px ${downbeat ? 'rgba(240,213,127,0.35)' : 'rgba(143,209,122,0.18)'}`,
+                    transition: 'all .06s',
+                  }}>{beatNum}</div>
+                );
+              })
+            ) : (
+              <span style={{ fontFamily: MONO, fontSize: 11, letterSpacing: 2, color: 'rgba(143,209,122,0.45)' }}>
+                {gameState === 'guessing' ? '? / ? / ?' : '— — —'}
+              </span>
+            )}
+          </div>
         )}
       </div>
-    </div>
+
+      {/* ── START ── */}
+      {gameState === 'start' && (
+        <>
+          <span style={{ fontFamily: MONO, fontSize: 10, color: PANEL.inkMute, textAlign: 'center', lineHeight: 1.7 }}>
+            A click track plays for two measures. Listen for the <b style={{ color: PANEL.brassLite }}>accented downbeat</b> and count the pulses — then name the meter.
+          </span>
+          <BrassButton label="▶  Play Rhythm" onClick={startNewRound} />
+        </>
+      )}
+
+      {/* ── PLAYING ── */}
+      {gameState === 'playing' && (
+        <div style={{ display: 'flex', justifyContent: 'center' }}>
+          <StatChip label="Beat" value={currentBeat || '—'} accent={currentBeat === 1 ? PANEL.brassLite : PANEL.phosphor} />
+        </div>
+      )}
+
+      {/* ── GUESSING ── */}
+      {gameState === 'guessing' && (
+        <>
+          <Engrave>Name the Meter</Engrave>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 9 }}>
+            {TIME_SIG_OPTIONS.map((opt) => (
+              <ChoiceButton key={opt.label} label={opt.label} onClick={() => handleGuess(opt.label)} />
+            ))}
+          </div>
+          <button onClick={() => playClickTrack(targetSig.beats, 2)} style={{
+            marginTop: 2, padding: '11px 0', width: '100%', borderRadius: 9, cursor: 'pointer',
+            border: `1px solid ${PANEL.line}`, background: 'rgba(0,0,0,0.22)',
+            fontFamily: MONO, fontSize: 10, letterSpacing: 2, textTransform: 'uppercase', color: PANEL.inkMute,
+          }}>↻ Replay Rhythm</button>
+        </>
+      )}
+
+      {/* ── RESULT ── */}
+      {gameState === 'result' && (
+        <>
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+            <StatChip label="Answer" value={targetSig.label} accent={PANEL.phosphor} />
+            {selectedAnswer && (
+              <StatChip label="You Said" value={selectedAnswer} accent={isCorrect ? PANEL.phosphor : '#e6b0a0'} />
+            )}
+          </div>
+
+          <Engrave>The Options</Engrave>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 9 }}>
+            {TIME_SIG_OPTIONS.map((opt) => {
+              const isTarget = opt.label === targetSig.label;
+              const isPicked = opt.label === selectedAnswer;
+              const state: 'idle' | 'selected' | 'correct' | 'wrong' =
+                isTarget ? 'correct' : (isPicked ? 'wrong' : 'idle');
+              return (
+                <ChoiceButton key={opt.label} label={opt.label} state={state} disabled />
+              );
+            })}
+          </div>
+
+          <BrassButton label="▶  Next Round" onClick={startNewRound} />
+        </>
+      )}
+    </SynthShell>
   );
 };
 

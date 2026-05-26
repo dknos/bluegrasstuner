@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { TuningDefinition } from '../types';
 import { getNoteAtFret, identifyChord, playTone, INSTRUMENT_DATA } from '../services/audioUtils';
+import { SynthShell, Tabs, Engrave, PANEL } from './synthkit';
 
 interface ChordCreatorProps {
   onClose: () => void;
@@ -9,10 +10,14 @@ interface ChordCreatorProps {
   tuning: TuningDefinition;
 }
 
+const SERIF = '"DM Serif Display", Georgia, serif';
+const MONO = '"JetBrains Mono", ui-monospace, monospace';
+const INSTRUMENTS = ['Guitar', 'Banjo', 'Ukulele', 'Mandolin'];
+
 // Preset Library for Standard Tunings
 const CHORD_PRESETS: Record<string, Record<string, number[]>> = {
     "Guitar": {
-        "C Major": [-1, 3, 2, 0, 1, 0], 
+        "C Major": [-1, 3, 2, 0, 1, 0],
         "G Major": [3, 2, 0, 0, 0, 3],
         "D Major": [-1, -1, 0, 2, 3, 2],
         "A Major": [-1, 0, 2, 2, 2, 0],
@@ -37,7 +42,7 @@ const CHORD_PRESETS: Record<string, Record<string, number[]>> = {
         "A Major": [0, 2, 2, 2, 2],
         "E Major": [0, 2, 1, 0, 2],
         "B Major": [0, 4, 4, 4, 4],
-        
+
         // Minors
         "E Minor": [0, 2, 0, 0, 2],
         "A Minor": [0, 2, 2, 1, 2],
@@ -65,7 +70,7 @@ const CHORD_PRESETS: Record<string, Record<string, number[]>> = {
         "E Major": [1, 4, 0, 2],
         "B Major": [4, 3, 2, 2],
         "Bb Major": [3, 2, 1, 1],
-        
+
         "A Minor": [2, 0, 0, 0],
         "E Minor": [0, 4, 3, 2],
         "D Minor": [2, 2, 1, 0],
@@ -85,12 +90,12 @@ const CHORD_PRESETS: Record<string, Record<string, number[]>> = {
         "A Major": [2, 2, 4, 5],
         "F Major": [5, 3, 0, 1],
         "E Major": [1, 2, 2, 0],
-        
+
         "A Minor": [2, 2, 3, 5],
         "E Minor": [0, 2, 2, 0],
         "D Minor": [2, 0, 0, 1],
         "B Minor": [4, 4, 5, 2],
-        
+
         "G7": [0, 0, 2, 1],
         "D7": [2, 0, 0, 0],
         "A7": [2, 2, 4, 3],
@@ -139,9 +144,9 @@ const ChordCreator: React.FC<ChordCreatorProps> = ({ onClose, instrumentName, tu
 
       stringFrets.forEach((fret, i) => {
           if (fret === -1) return; // Muted
-          
+
           // Map index directly to tuning notes
-          const openNote = activeTuning.notes[i]; 
+          const openNote = activeTuning.notes[i];
           if (openNote) {
               const info = getNoteAtFret(openNote.freq, fret);
               currentNotes.push(info);
@@ -156,7 +161,7 @@ const ChordCreator: React.FC<ChordCreatorProps> = ({ onClose, instrumentName, tu
 
   const handleFretClick = (stringIndex: number, fret: number) => {
       const newFrets = [...stringFrets];
-      
+
       // Toggle / Mute Logic
       if (newFrets[stringIndex] === fret) {
           if (fret === 0) {
@@ -167,10 +172,10 @@ const ChordCreator: React.FC<ChordCreatorProps> = ({ onClose, instrumentName, tu
       } else {
           newFrets[stringIndex] = fret;
       }
-      
+
       setStringFrets(newFrets);
       setSelectedPreset(""); // Clear preset selection on manual change
-      
+
       // Play note immediately for feedback if not muted
       if (newFrets[stringIndex] >= 0 && activeTuning.notes[stringIndex]) {
           const info = getNoteAtFret(activeTuning.notes[stringIndex].freq, newFrets[stringIndex]);
@@ -192,7 +197,7 @@ const ChordCreator: React.FC<ChordCreatorProps> = ({ onClose, instrumentName, tu
   const playChord = async (overrideFrets?: number[]) => {
       const fretsToUse = overrideFrets || stringFrets;
       const notesToPlay: number[] = [];
-      
+
       fretsToUse.forEach((fret, i) => {
           if (fret >= 0 && activeTuning.notes[i]) {
               notesToPlay.push(getNoteAtFret(activeTuning.notes[i].freq, fret).freq);
@@ -201,7 +206,7 @@ const ChordCreator: React.FC<ChordCreatorProps> = ({ onClose, instrumentName, tu
 
       for (const freq of notesToPlay) {
           playTone(freq, 'triangle');
-          await new Promise(r => setTimeout(r, 40)); 
+          await new Promise(r => setTimeout(r, 40));
       }
   };
 
@@ -213,176 +218,262 @@ const ChordCreator: React.FC<ChordCreatorProps> = ({ onClose, instrumentName, tu
   // We reverse for Tab View.
   const renderOrder = activeTuning ? [...activeTuning.notes].map((_, i) => i).reverse() : [];
 
+  // ── Vertical fretboard geometry (mobile-first: strings = columns, frets = rows) ──
+  // renderOrder gives us the left→right column order (high string first/left, bass last/right).
+  const numStrings = renderOrder.length;
+  const NUT_ROW_H = 46;     // open-string / nut row height
+  const FRET_ROW_H = 38;    // each fretted row
+  const LABEL_GUTTER = 30;  // left gutter for fret-number engravings
+  const FRETS = [...Array(12)].map((_, i) => i + 1); // 1..12
+  const phosphorOn = detectedChord !== 'Unknown';
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-md p-4 animate-fade-in font-sans">
-      <div className="bg-gray-900 border border-gray-700 rounded-2xl w-full max-w-5xl shadow-2xl relative flex flex-col h-[90vh] overflow-hidden">
-        
-        {/* Header */}
-        <div className="flex-none p-4 border-b border-gray-800 flex flex-col md:flex-row items-center justify-between gap-4 bg-gray-950">
-            <div className="flex items-center gap-3">
-                <h2 className="text-xl md:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 uppercase">
-                    CHORD CREATOR
-                </h2>
-                {/* Instrument Switcher */}
-                <select 
-                    value={activeInstrument}
-                    onChange={(e) => handleInstrumentChange(e.target.value)}
-                    className="bg-gray-800 text-gray-200 text-xs font-bold px-2 py-1 rounded border border-gray-700 uppercase tracking-widest outline-none focus:border-neon-blue"
-                >
-                    <option value="Guitar">Guitar</option>
-                    <option value="Banjo">Banjo</option>
-                    <option value="Ukulele">Ukulele</option>
-                    <option value="Mandolin">Mandolin</option>
-                </select>
-            </div>
-            
-            <div className="flex items-center gap-3 w-full md:w-auto">
-                <select 
-                    value={selectedPreset} 
-                    onChange={(e) => applyPreset(e.target.value)}
-                    className="flex-1 md:w-48 bg-gray-800 text-white text-sm rounded border border-gray-700 focus:border-neon-blue outline-none px-3 py-2"
-                >
-                    <option value="">-- Select Preset --</option>
-                    {availablePresets.map(p => <option key={p} value={p}>{p}</option>)}
-                </select>
+    <SynthShell name="Chord Creator" tag="Fretboard · Voicings" onClose={onClose} accent={PANEL.brass}>
 
-                <button 
-                    onClick={() => playChord()}
-                    className="px-6 py-2 bg-neon-blue hover:bg-cyan-400 text-black font-bold rounded shadow-lg shadow-neon-blue/20 transition-transform active:scale-95"
-                >
-                    PLAY
-                </button>
-                
-                <button onClick={onClose} className="text-gray-500 hover:text-white p-2">
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                </button>
-            </div>
+      {/* ── Instrument selector ── */}
+      <Tabs
+        options={INSTRUMENTS}
+        value={Math.max(0, INSTRUMENTS.indexOf(activeInstrument))}
+        onChange={(i) => handleInstrumentChange(INSTRUMENTS[i])}
+      />
+
+      {/* ── Phosphor readout: detected chord ── */}
+      <div style={{
+        position: 'relative', borderRadius: 10, padding: '14px 16px 16px', textAlign: 'center',
+        background: 'radial-gradient(120% 140% at 50% 0%, #0e120c, #060806)',
+        boxShadow: `inset 0 2px 14px rgba(0,0,0,0.85), inset 0 0 0 1px ${PANEL.brassDark}, 0 0 0 3px rgba(0,0,0,0.45)`,
+      }}>
+        <span style={{ fontFamily: MONO, fontSize: 8.5, letterSpacing: 3, textTransform: 'uppercase', color: 'rgba(143,209,122,0.55)' }}>
+          Detected Chord
+        </span>
+        <div style={{
+          fontFamily: SERIF, fontSize: 42, lineHeight: 1.05, marginTop: 2,
+          color: phosphorOn ? PANEL.phosphor : 'rgba(143,209,122,0.22)',
+          textShadow: phosphorOn ? `0 0 18px ${PANEL.phosphor}, 0 0 6px ${PANEL.phosphor}` : 'none',
+          transition: 'color .15s, text-shadow .15s',
+        }}>
+          {detectedChord}
         </div>
-
-        {/* Info Display */}
-        <div className="flex-none p-4 bg-gray-900 flex justify-center items-center border-b border-gray-800">
-             <div className="text-center">
-                 <div className="text-gray-500 text-xs font-bold uppercase tracking-widest mb-1">DETECTED CHORD</div>
-                 <div className={`text-4xl md:text-5xl font-black ${detectedChord === 'Unknown' ? 'text-gray-700' : 'text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]'}`}>
-                     {detectedChord}
-                 </div>
-             </div>
-        </div>
-
-        {/* Fretboard Container */}
-        <div className="flex-1 overflow-x-auto overflow-y-hidden bg-[#1a1510] relative flex items-center shadow-inner">
-            <div className="absolute inset-0 opacity-50 pointer-events-none" 
-                 style={{ backgroundImage: 'linear-gradient(90deg, #2a2018 0%, #3e2f24 50%, #2a2018 100%)', backgroundSize: '200px 100%' }}>
-            </div>
-
-            <div className="min-w-max px-8 py-10 relative">
-                {/* Nut Indicator */}
-                <div className="absolute top-0 bottom-0 left-[68px] w-[6px] bg-[#e3dac9] z-10 shadow-lg border-r border-[#c0b090]"></div>
-
-                {/* Grid */}
-                <div className="flex flex-col gap-0 select-none">
-                    
-                    {/* Fret Numbers Row */}
-                    <div className="flex h-8 mb-2">
-                        <div className="w-[40px] flex-shrink-0"></div>
-                        <div className="w-[40px] flex-shrink-0 text-center text-xs font-bold text-gray-500">OPEN</div>
-                        {[...Array(12)].map((_, i) => (
-                            <div key={i} className="w-[50px] flex-shrink-0 text-center text-xs font-bold text-white opacity-80" style={{ textShadow: '0 1px 2px black' }}>
-                                {i + 1}
-                            </div>
-                        ))}
-                    </div>
-
-                    {/* Strings Rows */}
-                    {activeTuning && renderOrder.map((stringIdx) => {
-                         const noteDef = activeTuning.notes[stringIdx];
-                         const isSelected = stringFrets[stringIdx];
-                         
-                         // Banjo 5th String Logic: In standard tuning, string 5 (index 4 in renderOrder usually) starts at 5th fret.
-                         // INSTRUMENT_DATA defines Banjo string 5 as the high drone.
-                         // If we are Banjo AND this is stringNum 5.
-                         const isBanjo5th = activeInstrument === 'Banjo' && noteDef.stringNum === 5;
-
-                         return (
-                            <div key={stringIdx} className="flex h-[36px] relative group">
-                                {/* String Label */}
-                                <div className="w-[40px] flex-shrink-0 flex items-center justify-end pr-3">
-                                    <div className="w-6 h-6 rounded-full bg-gray-800 border border-gray-600 flex items-center justify-center text-[10px] font-bold text-gray-300">
-                                        {noteDef.note.replace(/\d+/,'')}
-                                    </div>
-                                </div>
-
-                                {/* String Line */}
-                                <div className="absolute left-[40px] right-0 top-1/2 -translate-y-1/2 bg-gray-400 pointer-events-none z-0 shadow-sm" 
-                                     style={{ height: `${1 + (stringIdx * 0.3)}px` }}>
-                                </div>
-
-                                {/* Nut Slot */}
-                                <div 
-                                    onClick={() => handleFretClick(stringIdx, 0)}
-                                    className={`w-[40px] flex-shrink-0 border-r border-gray-700/50 relative cursor-pointer hover:bg-white/5 transition-colors flex items-center justify-center z-20`}
-                                >
-                                    {isSelected === -1 && <span className="text-red-500 text-lg font-bold">✕</span>}
-                                    {isSelected === 0 && <div className="w-4 h-4 rounded-full border-2 border-neon-blue bg-transparent shadow-[0_0_10px_#00f3ff]"></div>}
-                                </div>
-
-                                {/* Frets 1-12 */}
-                                {[...Array(12)].map((_, i) => {
-                                    const fretNum = i + 1;
-                                    const active = isSelected === fretNum;
-                                    const isDisabled = isBanjo5th && fretNum < 5; // Banjo 5th string short
-
-                                    return (
-                                        <div 
-                                            key={fretNum}
-                                            onClick={() => !isDisabled && handleFretClick(stringIdx, fretNum)}
-                                            className={`w-[50px] flex-shrink-0 border-r border-[#666] relative flex items-center justify-center z-20 
-                                                ${isDisabled ? 'bg-black/40 cursor-not-allowed' : 'cursor-pointer hover:bg-white/5'}
-                                            `}
-                                            style={{ 
-                                                borderImage: 'linear-gradient(to bottom, #888, #eee, #888) 1'
-                                            }}
-                                        >
-                                            {isDisabled ? (
-                                                <span className="text-black/30 text-xs select-none">///</span>
-                                            ) : (
-                                                active && (
-                                                    <div className="w-6 h-6 rounded-full bg-blue-500 border-2 border-white shadow-lg transform scale-110 flex items-center justify-center text-[10px] font-bold text-white z-30"></div>
-                                                )
-                                            )}
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                         );
-                    })}
-
-                    {/* Inlay Layer */}
-                    <div className="absolute top-[40px] bottom-0 left-[80px] right-0 pointer-events-none z-0">
-                         <div className="w-full h-full relative">
-                             {[3, 5, 7, 9, 12].map(fret => {
-                                 const pixelLeft = 40 + (fret - 1) * 50 + 25;
-                                 if (fret === 12) {
-                                     return (
-                                        <React.Fragment key={fret}>
-                                            <div className="absolute top-1/3 -translate-y-1/2 w-4 h-4 rounded-full bg-[#e3dac9] opacity-40 shadow-inner" style={{ left: pixelLeft }}></div>
-                                            <div className="absolute top-2/3 -translate-y-1/2 w-4 h-4 rounded-full bg-[#e3dac9] opacity-40 shadow-inner" style={{ left: pixelLeft }}></div>
-                                        </React.Fragment>
-                                     )
-                                 }
-                                 return (
-                                     <div key={fret} className="absolute top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-[#e3dac9] opacity-40 shadow-inner" style={{ left: pixelLeft }}></div>
-                                 )
-                             })}
-                         </div>
-                    </div>
-
-                </div>
-            </div>
-        </div>
-
       </div>
-    </div>
+
+      {/* ── Preset picker (styled native select; ~15-20 voicings per instrument) ── */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <Engrave>Preset Voicing</Engrave>
+        <div style={{ position: 'relative' }}>
+          <select
+            value={selectedPreset}
+            onChange={(e) => applyPreset(e.target.value)}
+            style={{
+              width: '100%', appearance: 'none', WebkitAppearance: 'none', cursor: 'pointer',
+              padding: '11px 34px 11px 14px', borderRadius: 9, outline: 'none',
+              fontFamily: MONO, fontSize: 12, letterSpacing: 0.5,
+              color: selectedPreset ? PANEL.brassLite : PANEL.inkMute,
+              background: 'linear-gradient(180deg,#221c15,#181410)',
+              border: 'none', boxShadow: `inset 0 0 0 1px ${PANEL.line}, inset 0 1px 3px rgba(0,0,0,0.5)`,
+            }}
+          >
+            <option value="">— Select a voicing —</option>
+            {availablePresets.map(p => <option key={p} value={p}>{p}</option>)}
+          </select>
+          <span style={{
+            position: 'absolute', right: 13, top: '50%', transform: 'translateY(-50%)',
+            pointerEvents: 'none', color: PANEL.brass, fontSize: 9,
+          }}>▼</span>
+        </div>
+      </div>
+
+      {/* ── Action buttons: PLAY + CLEAR (brass) ── */}
+      <div style={{ display: 'flex', gap: 10 }}>
+        <button
+          onClick={() => playChord()}
+          style={{
+            flex: 2, padding: '14px 0', borderRadius: 10, cursor: 'pointer', border: 'none',
+            fontFamily: SERIF, fontSize: 18, letterSpacing: 3, textTransform: 'uppercase', color: '#1a0d04',
+            background: `linear-gradient(180deg, ${PANEL.brassLite}, ${PANEL.brass})`,
+            boxShadow: `0 0 18px rgba(202,160,82,0.35), inset 0 1px 0 rgba(255,255,255,0.35), 0 2px 4px rgba(0,0,0,0.4)`,
+          }}
+        >
+          ▶ Play
+        </button>
+        <button
+          onClick={() => setStringFrets(new Array(activeTuning.notes.length).fill(0))}
+          style={{
+            flex: 1, padding: '14px 0', borderRadius: 10, cursor: 'pointer',
+            fontFamily: MONO, fontSize: 11, letterSpacing: 2, textTransform: 'uppercase', color: PANEL.inkMute,
+            background: 'linear-gradient(180deg,#211c16,#14100c)',
+            border: `1px solid ${PANEL.brassDark}`,
+            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05), 0 2px 4px rgba(0,0,0,0.4)',
+          }}
+        >
+          Clear
+        </button>
+      </div>
+
+      {/* ── Vertical walnut fretboard ── */}
+      <Engrave>Tap to set · tap again to mute</Engrave>
+      {activeTuning && (
+        <div style={{ display: 'flex', gap: 8 }}>
+          {/* fret-number engraving gutter */}
+          <div style={{ flex: `0 0 ${LABEL_GUTTER}px`, display: 'flex', flexDirection: 'column', paddingTop: 26 }}>
+            <div style={{ height: NUT_ROW_H, display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+              <span style={{ fontFamily: MONO, fontSize: 7.5, letterSpacing: 1, color: PANEL.inkMute, paddingRight: 6 }}>NUT</span>
+            </div>
+            {FRETS.map((fretNum) => (
+              <div key={fretNum} style={{ height: FRET_ROW_H, display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+                <span style={{
+                  fontFamily: MONO, fontSize: 8.5, letterSpacing: 0.5, paddingRight: 6,
+                  color: [3, 5, 7, 9, 12].includes(fretNum) ? PANEL.brass : PANEL.inkMute,
+                }}>{fretNum}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* walnut neck */}
+          <div style={{
+            flex: 1, position: 'relative', borderRadius: 10, overflow: 'hidden',
+            background: `linear-gradient(180deg, ${PANEL.wood1}, ${PANEL.wood2})`,
+            boxShadow: `inset 0 1px 0 rgba(255,255,255,0.07), inset 0 0 0 1px rgba(0,0,0,0.5), 0 4px 12px rgba(0,0,0,0.5), 0 0 0 1px ${PANEL.brassDark}`,
+          }}>
+            {/* string-label header (open-note discs, one per visible string) */}
+            <div style={{ display: 'flex', height: 26, alignItems: 'center', padding: '0 4px' }}>
+              {renderOrder.map((stringIdx) => {
+                const noteDef = activeTuning.notes[stringIdx];
+                return (
+                  <div key={stringIdx} style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
+                    <div style={{
+                      width: 20, height: 20, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontFamily: MONO, fontSize: 9, fontWeight: 700, color: '#1a0d04',
+                      background: `radial-gradient(circle at 35% 28%, ${PANEL.brassLite}, ${PANEL.brass} 60%, ${PANEL.brassDark})`,
+                      boxShadow: 'inset 0 1px 0 rgba(255,235,180,0.6), 0 1px 2px rgba(0,0,0,0.5)',
+                    }}>
+                      {noteDef.note.replace(/\d+/, '')}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* fretboard rows region */}
+            <div style={{ position: 'relative' }}>
+              {/* brass nut (top edge of open row) */}
+              <div style={{
+                position: 'absolute', top: 0, left: 4, right: 4, height: 5, borderRadius: 2, zIndex: 4,
+                background: `linear-gradient(180deg, ${PANEL.brassLite}, ${PANEL.brass})`,
+                boxShadow: '0 1px 2px rgba(0,0,0,0.6)',
+              }} />
+
+              {/* brass fret wires (below the open row, between fret rows) */}
+              {FRETS.map((fretNum) => (
+                <div key={fretNum} style={{
+                  position: 'absolute', left: 4, right: 4, height: 2, borderRadius: 2, zIndex: 1,
+                  top: NUT_ROW_H + fretNum * FRET_ROW_H,
+                  background: `linear-gradient(180deg, ${PANEL.brass}, ${PANEL.brassDark})`,
+                  boxShadow: '0 1px 1px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,235,180,0.3)',
+                }} />
+              ))}
+
+              {/* metal strings (vertical lines, thicker toward the bass side) */}
+              {renderOrder.map((stringIdx, col) => {
+                // Bass side = lowest tuning index; column nearest it is thickest.
+                const thickness = 1 + (stringIdx * 0.3);
+                return (
+                  <div key={stringIdx} style={{
+                    position: 'absolute', top: 0, bottom: 0, zIndex: 2, width: thickness,
+                    left: `calc(${((col + 0.5) / numStrings) * 100}% - ${thickness / 2}px)`,
+                    background: 'linear-gradient(90deg, rgba(255,255,255,0.4), rgba(180,170,150,0.55))',
+                    boxShadow: '0 0 1px rgba(0,0,0,0.5)',
+                  }} />
+                );
+              })}
+
+              {/* center-line inlay dots (3,5,7,9,12 double) */}
+              <div style={{ position: 'absolute', top: 0, bottom: 0, left: '50%', transform: 'translateX(-50%)', width: 30, zIndex: 1, pointerEvents: 'none' }}>
+                {[3, 5, 7, 9, 12].map((fret) => {
+                  const cy = NUT_ROW_H + (fret - 0.5) * FRET_ROW_H;
+                  if (fret === 12) {
+                    return (
+                      <React.Fragment key={fret}>
+                        <div style={{ position: 'absolute', top: cy, left: '50%', transform: 'translate(-130%,-50%)', width: 9, height: 9, borderRadius: '50%', background: PANEL.ink, opacity: 0.28 }} />
+                        <div style={{ position: 'absolute', top: cy, left: '50%', transform: 'translate(30%,-50%)', width: 9, height: 9, borderRadius: '50%', background: PANEL.ink, opacity: 0.28 }} />
+                      </React.Fragment>
+                    );
+                  }
+                  return (
+                    <div key={fret} style={{ position: 'absolute', top: cy, left: '50%', transform: 'translate(-50%,-50%)', width: 10, height: 10, borderRadius: '50%', background: PANEL.ink, opacity: 0.28 }} />
+                  );
+                })}
+              </div>
+
+              {/* tap grid: one column per string, rows = open + 12 frets */}
+              <div style={{ display: 'flex', position: 'relative', zIndex: 5 }}>
+                {renderOrder.map((stringIdx) => {
+                  const noteDef = activeTuning.notes[stringIdx];
+                  const isSelected = stringFrets[stringIdx];
+
+                  // Banjo 5th String Logic: In standard tuning, string 5 starts at 5th fret.
+                  const isBanjo5th = activeInstrument === 'Banjo' && noteDef.stringNum === 5;
+
+                  return (
+                    <div key={stringIdx} style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                      {/* Open / Nut cell */}
+                      <div
+                        onClick={() => handleFretClick(stringIdx, 0)}
+                        style={{
+                          height: NUT_ROW_H, position: 'relative', cursor: 'pointer',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}
+                      >
+                        {isSelected === -1 && (
+                          <span style={{ color: '#c45a3a', fontSize: 17, fontWeight: 700, lineHeight: 1 }}>✕</span>
+                        )}
+                        {isSelected === 0 && (
+                          <div style={{
+                            width: 15, height: 15, borderRadius: '50%', boxSizing: 'border-box',
+                            border: `2px solid ${PANEL.phosphor}`, background: 'transparent',
+                            boxShadow: `0 0 10px ${PANEL.phosphor}`,
+                          }} />
+                        )}
+                      </div>
+
+                      {/* Fretted cells 1..12 */}
+                      {FRETS.map((fretNum) => {
+                        const active = isSelected === fretNum;
+                        const isDisabled = isBanjo5th && fretNum < 5; // Banjo 5th string short
+
+                        return (
+                          <div
+                            key={fretNum}
+                            onClick={() => !isDisabled && handleFretClick(stringIdx, fretNum)}
+                            style={{
+                              height: FRET_ROW_H, position: 'relative',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              cursor: isDisabled ? 'not-allowed' : 'pointer',
+                              background: isDisabled ? 'rgba(0,0,0,0.4)' : 'transparent',
+                            }}
+                          >
+                            {isDisabled ? (
+                              <span style={{ color: 'rgba(0,0,0,0.35)', fontFamily: MONO, fontSize: 9, userSelect: 'none' }}>///</span>
+                            ) : (
+                              active && (
+                                <div style={{
+                                  width: 22, height: 22, borderRadius: '50%', zIndex: 6,
+                                  background: `radial-gradient(circle at 35% 28%, ${PANEL.brassLite}, ${PANEL.brass} 55%, ${PANEL.brassDark})`,
+                                  boxShadow: `0 0 10px rgba(202,160,82,0.6), inset 0 1px 0 rgba(255,235,180,0.6), 0 1px 3px rgba(0,0,0,0.6)`,
+                                }} />
+                              )
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </SynthShell>
   );
 };
 

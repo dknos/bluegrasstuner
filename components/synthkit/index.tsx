@@ -451,3 +451,46 @@ export const Keys: React.FC<{
     </div>
   );
 };
+
+// ── Tabs ── top-level mode switcher (bigger than Rocker) ─────────────────────
+export const Tabs: React.FC<{ options: string[]; value: number; onChange: (i: number) => void }> = ({ options, value, onChange }) => (
+  <div style={{ display: 'flex', borderRadius: 9, overflow: 'hidden', boxShadow: `inset 0 0 0 1px ${PANEL.line}`, background: '#181410' }}>
+    {options.map((o, i) => (
+      <button key={o} onClick={() => onChange(i)} style={{
+        flex: 1, padding: '11px 8px', cursor: 'pointer', border: 'none',
+        fontFamily: MONO, fontSize: 11, letterSpacing: 1.5, textTransform: 'uppercase', fontWeight: 700,
+        background: value === i ? `linear-gradient(180deg, ${PANEL.brassLite}, ${PANEL.brass})` : 'transparent',
+        color: value === i ? '#1a0d04' : PANEL.inkMute, transition: 'background .12s',
+      }}>{o}</button>
+    ))}
+  </div>
+);
+
+// ── ChoiceButton ── answer / pick tile with feedback states ──────────────────
+export const ChoiceButton: React.FC<{
+  label: React.ReactNode; sub?: string; state?: 'idle' | 'selected' | 'correct' | 'wrong';
+  onClick?: () => void; disabled?: boolean;
+}> = ({ label, sub, state = 'idle', onClick, disabled }) => {
+  const m = {
+    idle: { bg: '#221c15', col: PANEL.ink, ring: PANEL.line },
+    selected: { bg: 'linear-gradient(180deg,#3a2e1c,#2a2014)', col: PANEL.brassLite, ring: PANEL.brass },
+    correct: { bg: 'linear-gradient(180deg,#2f3a1c,#1e2a12)', col: PANEL.phosphor, ring: PANEL.phosphor },
+    wrong: { bg: 'linear-gradient(180deg,#3a1c1c,#2a1212)', col: '#e6b0a0', ring: '#a8472a' },
+  }[state];
+  return (
+    <button onClick={onClick} disabled={disabled} style={{
+      padding: '14px 12px', borderRadius: 10, cursor: disabled ? 'default' : 'pointer', border: 'none', width: '100%',
+      fontFamily: SERIF, fontSize: 19, color: m.col, background: m.bg, opacity: disabled && state === 'idle' ? 0.55 : 1,
+      boxShadow: `inset 0 0 0 1.5px ${m.ring}, 0 2px 4px rgba(0,0,0,0.4)`,
+      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, transition: 'all .12s',
+    }}>{label}{sub && <span style={{ fontFamily: MONO, fontSize: 9, color: PANEL.inkMute, letterSpacing: 1 }}>{sub}</span>}</button>
+  );
+};
+
+// ── StatChip ── score / streak / round readout ──────────────────────────────
+export const StatChip: React.FC<{ label: string; value: React.ReactNode; accent?: string }> = ({ label, value, accent = PANEL.ink }) => (
+  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '6px 14px', borderRadius: 8, background: '#141009', boxShadow: `inset 0 0 0 1px ${PANEL.line}`, minWidth: 64 }}>
+    <span style={{ fontFamily: MONO, fontSize: 8, color: PANEL.inkMute, letterSpacing: 1.5, textTransform: 'uppercase' }}>{label}</span>
+    <span style={{ fontFamily: SERIF, fontSize: 22, color: accent, lineHeight: 1.15 }}>{value}</span>
+  </div>
+);
