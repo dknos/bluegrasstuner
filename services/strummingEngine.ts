@@ -15,23 +15,24 @@ export const generatePattern = (style: StrumStyle, beatsPerBar: number): AudioEv
 
     // Velocities reduced by ~20% to prevent master bus clipping
     if (style === 'Bluegrass' || style === 'Boom-Chuck') {
-        // Classic: Root(1) Strum(2) Alt(3) Strum(4)
-        // If 4/4
-        events.push({ type: 'BASS_ROOT', beatOffset: 0, velocity: 0.85 });
-        events.push({ type: 'STRUM_DOWN', beatOffset: 1, velocity: 0.5 }); // weaker strum
-        events.push({ type: 'BASS_ALT', beatOffset: 2, velocity: 0.8 });
-        events.push({ type: 'STRUM_DOWN', beatOffset: 3, velocity: 0.55 });
-        
-        // Add subtle upstrokes or ghost notes for "Bluegrass" feel
+        // Authentic boom-CHUCK: alternating bass on 1 & 3 (the "boom"), a muted
+        // chord choke on 2 & 4 (the "chuck"). The chuck is the defining sound —
+        // a short, percussive, damped strum, NOT a ringing one.
+        events.push({ type: 'BASS_ROOT', beatOffset: 0, velocity: 0.9 });
+        events.push({ type: 'STRUM_MUTE', beatOffset: 1, velocity: 0.6 });
+        events.push({ type: 'BASS_ALT', beatOffset: 2, velocity: 0.85 });
+        events.push({ type: 'STRUM_MUTE', beatOffset: 3, velocity: 0.6 });
+
+        // Bluegrass drives harder: ringing offbeat upstrokes between the chucks.
         if (style === 'Bluegrass') {
-            events.push({ type: 'STRUM_UP', beatOffset: 1.5, velocity: 0.35 });
-            events.push({ type: 'STRUM_UP', beatOffset: 3.5, velocity: 0.4 });
+            events.push({ type: 'STRUM_UP', beatOffset: 1.5, velocity: 0.32 });
+            events.push({ type: 'STRUM_UP', beatOffset: 3.5, velocity: 0.38 });
         }
     } else if (style === 'Waltz') {
-        // 3/4: Bass Strum Strum
+        // 3/4 oom-pah-pah: bass on 1, two muted chucks on 2 & 3.
         events.push({ type: 'BASS_ROOT', beatOffset: 0, velocity: 0.9 });
-        events.push({ type: 'STRUM_DOWN', beatOffset: 1, velocity: 0.5 });
-        events.push({ type: 'STRUM_DOWN', beatOffset: 2, velocity: 0.45 });
+        events.push({ type: 'STRUM_MUTE', beatOffset: 1, velocity: 0.55 });
+        events.push({ type: 'STRUM_MUTE', beatOffset: 2, velocity: 0.5 });
     } else if (style === 'Swing') {
         // Shuffle feel
         events.push({ type: 'BASS_ROOT', beatOffset: 0, velocity: 0.85 });

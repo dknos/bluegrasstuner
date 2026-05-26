@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { EnhancedGuitarEngine } from '../services/enhancedSynthesis';
+import { KarplusGuitarEngine } from '../services/karplusGuitar';
 import { generatePattern, StrumStyle } from '../services/strummingEngine';
 import { getChordData } from '../services/voicingEngine';
 import { PANEL, Engrave, Rocker } from './synthkit';
@@ -160,7 +160,7 @@ const OpenJamSimulator: React.FC<OpenJamSimulatorProps> = ({ onClose }) => {
     const [beatInBar, setBeatInBar] = useState(0);
 
     // Engine Refs
-    const synthEngineRef = useRef<EnhancedGuitarEngine | null>(null);
+    const synthEngineRef = useRef<KarplusGuitarEngine | null>(null);
 
     // Playback Refs
     const nextNoteTimeRef = useRef<number>(0);
@@ -179,10 +179,13 @@ const OpenJamSimulator: React.FC<OpenJamSimulatorProps> = ({ onClose }) => {
 
     const stripRef = useRef<HTMLDivElement>(null);
 
-    // Init Engine
+    // Init Engine — host owns the AudioContext, engine takes it (foundation rule).
     useEffect(() => {
-        synthEngineRef.current = new EnhancedGuitarEngine();
-        return () => { synthEngineRef.current?.close(); };
+        const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const eng = new KarplusGuitarEngine(ctx);
+        eng.connect(ctx.destination);
+        synthEngineRef.current = eng;
+        return () => { eng.dispose(); ctx.close(); };
     }, []);
 
     // Sync Refs
@@ -311,6 +314,15 @@ const OpenJamSimulator: React.FC<OpenJamSimulatorProps> = ({ onClose }) => {
                         setTimeout(() => {
                             setCurrentStrum(dir);
                             setTimeout(() => setCurrentStrum('NONE'), 150);
+                        }, (evTime - ctx.currentTime) * 1000);
+                    }
+
+                    // -- PLAY MUTED CHUCK (boom-chuck backbeat) --
+                    if (ev.type === 'STRUM_MUTE' && mixRef.current !== 'BASS') {
+                        engine.playChuck(chordData.freqs, evTime, ev.velocity, bpmRef.current);
+                        setTimeout(() => {
+                            setCurrentStrum('DOWN');
+                            setTimeout(() => setCurrentStrum('NONE'), 100);
                         }, (evTime - ctx.currentTime) * 1000);
                     }
                 });
