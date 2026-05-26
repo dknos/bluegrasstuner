@@ -58,7 +58,9 @@ const Defs = () => (
 export const SynthShell: React.FC<{
   name: string; tag?: string; onClose: () => void; children: React.ReactNode;
   accent?: string;
-}> = ({ name, tag, onClose, children, accent = PANEL.brass }) => (
+  scope?: React.ReactNode;     // pinned under the header (always visible)
+  keyboard?: React.ReactNode;  // pinned at the bottom (always visible)
+}> = ({ name, tag, onClose, children, accent = PANEL.brass, scope, keyboard }) => (
   <div onClick={onClose} style={{
     position: 'fixed', inset: 0, zIndex: 120, background: 'rgba(8,5,3,0.82)',
     backdropFilter: 'blur(3px)', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -97,11 +99,19 @@ export const SynthShell: React.FC<{
           <BrassScrew style={{ position: 'absolute', top: 6, left: 6 }} />
           <BrassScrew style={{ position: 'absolute', top: 6, right: 6, display: 'none' }} />
         </div>
+        {/* pinned scope (always visible, doesn't scroll away) */}
+        {scope && (
+          <div style={{ position: 'relative', flex: '0 0 auto', padding: '12px 14px 0' }}>{scope}</div>
+        )}
         {/* body (scrolls) — sk-scroll keeps fixed-height children (Keys, Scope) from
             collapsing when content overflows the flex column on short phone screens */}
-        <div className="sk-scroll" style={{ position: 'relative', flex: 1, minHeight: 0, overflowY: 'auto', padding: '16px 14px 18px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div className="sk-scroll" style={{ position: 'relative', flex: 1, minHeight: 0, overflowY: 'auto', padding: '14px 14px 16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
           {children}
         </div>
+        {/* pinned keyboard (always playable, thumb reach) */}
+        {keyboard && (
+          <div style={{ position: 'relative', flex: '0 0 auto', padding: '8px 10px env(safe-area-inset-bottom,10px)', borderTop: `1px solid ${PANEL.line}`, background: 'linear-gradient(0deg, rgba(0,0,0,0.3), rgba(0,0,0,0))' }}>{keyboard}</div>
+        )}
         {/* bottom corner screws */}
         <BrassScrew style={{ position: 'absolute', bottom: 6, left: 6 }} />
         <BrassScrew style={{ position: 'absolute', bottom: 6, right: 6 }} />

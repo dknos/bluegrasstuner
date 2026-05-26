@@ -237,8 +237,9 @@ const DSynth: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   };
 
   return (
-    <SynthShell name="D Synth" tag="Model D · 3-Osc Analog Lead" onClose={onClose} accent={PANEL.brass}>
-      <Scope analyser={analyser} />
+    <SynthShell name="D Synth" tag="Model D · 3-Osc Analog Lead" onClose={onClose} accent={PANEL.brass}
+      scope={<Scope analyser={analyser} />}
+      keyboard={<Keys octaves={2} startMidi={48} activeNotes={active} onNoteOn={noteOn} onNoteOff={noteOff} />}>
 
       <Engrave>Oscillators</Engrave>
       <div style={{ display: 'flex', justifyContent: 'space-around', gap: 8 }}>
@@ -265,8 +266,6 @@ const DSynth: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         <Knob label="Drive" value={drive} min={0} max={1} step={0.01} onChange={(v) => { setDrive(v); sp('drive', v); }} format={(v) => `${Math.round(v * 100)}%`} accent={PANEL.brassLite} />
       </KnobRow>
 
-      <Engrave>Keyboard</Engrave>
-      <Keys octaves={2} startMidi={48} activeNotes={active} onNoteOn={noteOn} onNoteOff={noteOff} />
     </SynthShell>
   );
 };

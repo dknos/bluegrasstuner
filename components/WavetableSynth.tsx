@@ -317,8 +317,9 @@ const WavetableSynth: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   };
 
   return (
-    <SynthShell name="Wavetable" tag="Wavetable · Morphing" onClose={onClose} accent={PANEL.brass}>
-      <Scope analyser={analyser} mode="wave" />
+    <SynthShell name="Wavetable" tag="Wavetable · Morphing" onClose={onClose} accent={PANEL.brass}
+      scope={<Scope analyser={analyser} mode="wave" />}
+      keyboard={<Keys octaves={2} startMidi={48} activeNotes={active} onNoteOn={noteOn} onNoteOff={noteOff} />}>
 
       <Engrave>Wavetable</Engrave>
       <KnobRow>
@@ -357,8 +358,6 @@ const WavetableSynth: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         border: `1px solid ${PANEL.brassDark}`, boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05), 0 2px 4px rgba(0,0,0,0.4)',
       }}>⟳ Randomize</button>
 
-      <Engrave>Keyboard</Engrave>
-      <Keys octaves={2} startMidi={48} activeNotes={active} onNoteOn={noteOn} onNoteOff={noteOff} />
     </SynthShell>
   );
 };

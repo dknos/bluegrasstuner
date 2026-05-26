@@ -203,8 +203,8 @@ const ReeseSynth: React.FC<ReeseSynthProps> = ({ onClose }) => {
     };
 
     return (
-        <SynthShell name="Reese Bass" tag="Neuro · Supersaw · Bass Engine" onClose={onClose} accent="#caa052">
-            <Scope analyser={analyser} />
+        <SynthShell name="Reese Bass" tag="Neuro · Supersaw · Bass Engine" onClose={onClose} accent="#caa052"
+            scope={<Scope analyser={analyser} />}>
             <KnobRow>
                 <Knob label="Cutoff" value={cutoff} min={50} max={5000} log onChange={setCutoff} format={(v) => `${Math.round(v)} Hz`} />
                 <Knob label="Dirt" value={distortion} min={0} max={400} onChange={setDistortion} format={(v) => Math.round(v).toString()} />

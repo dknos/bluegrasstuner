@@ -248,8 +248,9 @@ const OPL3Synth: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   };
 
   return (
-    <SynthShell name="OPL3" tag="FM · AdLib / SB16" onClose={onClose} accent={PANEL.phosphor}>
-      <Scope analyser={analyser} mode="wave" />
+    <SynthShell name="OPL3" tag="FM · AdLib / SB16" onClose={onClose} accent={PANEL.phosphor}
+      scope={<Scope analyser={analyser} mode="wave" />}
+      keyboard={<Keys octaves={2} startMidi={48} activeNotes={active} onNoteOn={noteOn} onNoteOff={noteOff} />}>
 
       <Engrave>Voice · Patch</Engrave>
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'center' }}>
@@ -285,8 +286,6 @@ const OPL3Synth: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         <Rocker label="Flavor" options={['AdLib', 'SB16']} value={chip} onChange={setChipFlavor} />
       </div>
 
-      <Engrave>Keyboard</Engrave>
-      <Keys octaves={2} startMidi={48} activeNotes={active} onNoteOn={noteOn} onNoteOff={noteOff} />
     </SynthShell>
   );
 };

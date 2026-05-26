@@ -311,8 +311,9 @@ const Spectravox: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   };
 
   return (
-    <SynthShell name="Spectravox" tag="Formant · Spectral Vocoder" onClose={onClose} accent={PANEL.brass}>
-      <Scope analyser={analyser} mode="bars" height={92} />
+    <SynthShell name="Spectravox" tag="Formant · Spectral Vocoder" onClose={onClose} accent={PANEL.brass}
+      scope={<Scope analyser={analyser} mode="bars" height={72} />}
+      keyboard={<Keys octaves={2} startMidi={48} activeNotes={active} onNoteOn={noteOn} onNoteOff={noteOff} />}>
 
       <Engrave>Vowel</Engrave>
       <div style={{ display: 'flex', justifyContent: 'center' }}>
@@ -344,8 +345,6 @@ const Spectravox: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         <Knob label="Rel" value={release} min={0.01} max={4} step={0.01} log onChange={(v) => { setRelease(v); sp('release', v); }} format={(v) => `${v.toFixed(2)}s`} />
       </KnobRow>
 
-      <Engrave>Keyboard</Engrave>
-      <Keys octaves={2} startMidi={48} activeNotes={active} onNoteOn={noteOn} onNoteOff={noteOff} />
     </SynthShell>
   );
 };
