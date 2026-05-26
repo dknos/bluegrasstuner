@@ -97,8 +97,9 @@ export const SynthShell: React.FC<{
           <BrassScrew style={{ position: 'absolute', top: 6, left: 6 }} />
           <BrassScrew style={{ position: 'absolute', top: 6, right: 6, display: 'none' }} />
         </div>
-        {/* body (scrolls) */}
-        <div style={{ position: 'relative', flex: 1, overflowY: 'auto', padding: '16px 14px 18px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {/* body (scrolls) — sk-scroll keeps fixed-height children (Keys, Scope) from
+            collapsing when content overflows the flex column on short phone screens */}
+        <div className="sk-scroll" style={{ position: 'relative', flex: 1, minHeight: 0, overflowY: 'auto', padding: '16px 14px 18px', display: 'flex', flexDirection: 'column', gap: 16 }}>
           {children}
         </div>
         {/* bottom corner screws */}
