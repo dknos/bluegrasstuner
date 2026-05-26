@@ -115,10 +115,63 @@ const playDrum = (ctx: AudioContext, destination: AudioNode, type: string, time:
             gain.gain.setValueAtTime(0.8, time); gain.gain.exponentialRampToValueAtTime(0.001, time + 0.3);
             osc.connect(gain); osc.start(time); osc.stop(time + 0.3);
             break;
-        default: 
-             osc.type = 'sine'; osc.frequency.setValueAtTime(1200, time); osc.frequency.exponentialRampToValueAtTime(200, time + 0.1);
-             gain.gain.setValueAtTime(0.3, time); gain.gain.exponentialRampToValueAtTime(0.001, time + 0.1);
-             osc.connect(gain); osc.start(time); osc.stop(time + 0.1);
+        case 'Rim': {
+            // Rimshot — sharp short click (high triangle blip).
+            const ro = ctx.createOscillator(); ro.type = 'triangle'; ro.frequency.setValueAtTime(1700, time);
+            const rg = ctx.createGain(); rg.gain.setValueAtTime(0.5, time); rg.gain.exponentialRampToValueAtTime(0.001, time + 0.04);
+            ro.connect(rg); rg.connect(destination); ro.start(time); ro.stop(time + 0.05);
+            break;
+        }
+        case 'Clap': {
+            // Clap — three quick band-passed noise bursts + a longer tail.
+            [0, 0.01, 0.02, 0.035].forEach((off, k, arr) => {
+                const last = k === arr.length - 1;
+                const cn = ctx.createBufferSource(); cn.buffer = noiseBuffer;
+                const cf = ctx.createBiquadFilter(); cf.type = 'bandpass'; cf.frequency.value = 1200; cf.Q.value = 1.3;
+                const cg = ctx.createGain();
+                cg.gain.setValueAtTime(last ? 0.5 : 0.32, time + off);
+                cg.gain.exponentialRampToValueAtTime(0.001, time + off + (last ? 0.12 : 0.03));
+                cn.connect(cf); cf.connect(cg); cg.connect(destination); cn.start(time + off);
+            });
+            break;
+        }
+        case 'Shaker': {
+            // Shaker — very short, soft high-passed noise.
+            const sn = ctx.createBufferSource(); sn.buffer = noiseBuffer;
+            const sf = ctx.createBiquadFilter(); sf.type = 'highpass'; sf.frequency.value = 6500;
+            const sg = ctx.createGain();
+            sg.gain.setValueAtTime(0.0, time); sg.gain.linearRampToValueAtTime(0.25, time + 0.005); sg.gain.exponentialRampToValueAtTime(0.001, time + 0.06);
+            sn.connect(sf); sf.connect(sg); sg.connect(destination); sn.start(time);
+            break;
+        }
+        case 'Cowbell': {
+            // 808 cowbell — two detuned squares (~540 + 800Hz) through a bandpass.
+            const c1 = ctx.createOscillator(); c1.type = 'square'; c1.frequency.value = 540;
+            const c2 = ctx.createOscillator(); c2.type = 'square'; c2.frequency.value = 800;
+            const cbp = ctx.createBiquadFilter(); cbp.type = 'bandpass'; cbp.frequency.value = 2640; cbp.Q.value = 1.4;
+            const cg = ctx.createGain(); cg.gain.setValueAtTime(0.4, time); cg.gain.exponentialRampToValueAtTime(0.001, time + 0.35);
+            c1.connect(cbp); c2.connect(cbp); cbp.connect(cg); cg.connect(destination);
+            c1.start(time); c2.start(time); c1.stop(time + 0.35); c2.stop(time + 0.35);
+            break;
+        }
+        case 'Perc': {
+            // Tuned wood-block-ish perc — triangle with a fast pitch drop.
+            osc.type = 'triangle'; osc.frequency.setValueAtTime(420, time); osc.frequency.exponentialRampToValueAtTime(180, time + 0.12);
+            gain.gain.setValueAtTime(0.5, time); gain.gain.exponentialRampToValueAtTime(0.001, time + 0.14);
+            osc.connect(gain); osc.start(time); osc.stop(time + 0.15);
+            break;
+        }
+        case 'Zap':
+            // The one intentional zap — a downward laser sweep.
+            osc.type = 'sawtooth'; osc.frequency.setValueAtTime(1800, time); osc.frequency.exponentialRampToValueAtTime(120, time + 0.18);
+            gain.gain.setValueAtTime(0.4, time); gain.gain.exponentialRampToValueAtTime(0.001, time + 0.2);
+            osc.connect(gain); osc.start(time); osc.stop(time + 0.2);
+            break;
+        default:
+             // True unknown — neutral click.
+             osc.type = 'sine'; osc.frequency.setValueAtTime(800, time); osc.frequency.exponentialRampToValueAtTime(300, time + 0.08);
+             gain.gain.setValueAtTime(0.3, time); gain.gain.exponentialRampToValueAtTime(0.001, time + 0.08);
+             osc.connect(gain); osc.start(time); osc.stop(time + 0.08);
     }
 };
 
@@ -194,6 +247,8 @@ const DrumMachine: React.FC<DrumMachineProps> = ({ onClose }) => {
   
   // Pad State
   const [padMode, setPadMode] = useState<'FILTER' | 'PITCH'>('FILTER');
+  // Which pad/note the 16-step sequencer row currently edits (was hardcoded to kick).
+  const [seqTarget, setSeqTarget] = useState(0);
 
   // TRACKS
   const [tracks, setTracks] = useState<Track[]>([
@@ -309,6 +364,7 @@ const DrumMachine: React.FC<DrumMachineProps> = ({ onClose }) => {
           
           if (isRecording && isPlaying) toggleStep(currentStep, noteIdx);
       }
+      setSeqTarget(noteIdx); // tapping a pad/key aims the step row at it
       setActiveNotes(prev => [...prev, noteIdx]);
   };
 
@@ -425,7 +481,7 @@ const DrumMachine: React.FC<DrumMachineProps> = ({ onClose }) => {
               
               ctx.beginPath();
               ctx.arc(px, py, 10 * p.life, 0, Math.PI * 2);
-              ctx.fillStyle = `rgba(0, 243, 255, ${p.life * 0.5})`;
+              ctx.fillStyle = `rgba(143, 209, 122, ${p.life * 0.5})`;
               ctx.fill();
           });
 
@@ -435,9 +491,9 @@ const DrumMachine: React.FC<DrumMachineProps> = ({ onClose }) => {
 
           // Glow
           const gradient = ctx.createRadialGradient(cx, cy, 5, cx, cy, 40);
-          gradient.addColorStop(0, 'rgba(0, 243, 255, 1)');
-          gradient.addColorStop(0.5, 'rgba(0, 243, 255, 0.2)');
-          gradient.addColorStop(1, 'rgba(0, 243, 255, 0)');
+          gradient.addColorStop(0, 'rgba(143, 209, 122, 1)');
+          gradient.addColorStop(0.5, 'rgba(143, 209, 122, 0.2)');
+          gradient.addColorStop(1, 'rgba(143, 209, 122, 0)');
           
           ctx.fillStyle = gradient;
           ctx.beginPath();
@@ -498,7 +554,8 @@ const DrumMachine: React.FC<DrumMachineProps> = ({ onClose }) => {
               {/* Mode Toggle Overlay */}
               <button 
                 onClick={() => setPadMode(m => m === 'FILTER' ? 'PITCH' : 'FILTER')}
-                className="absolute top-2 right-2 px-2 py-1 bg-gray-900/80 border border-gray-600 rounded text-[10px] font-bold text-neon-blue hover:bg-gray-800 transition-colors z-20"
+                className="absolute top-2 right-2 px-2 py-1 bg-gray-900/80 border border-gray-600 rounded text-[10px] font-bold hover:bg-gray-800 transition-colors z-20"
+                style={{ color: PANEL.brass }}
               >
                   MODE: {padMode}
               </button>
@@ -533,7 +590,7 @@ const DrumMachine: React.FC<DrumMachineProps> = ({ onClose }) => {
             <div className="flex-none flex gap-2 px-3 py-2" style={{ borderBottom: `1px solid ${line}` }}>
                 {tracks.map(track => (
                     <button key={track.id}
-                        onClick={() => { setSelectedTrackId(track.id); setViewMode(track.type === 'DRUM' ? 'DRUMS' : 'KEYS'); }}
+                        onClick={() => { setSelectedTrackId(track.id); setViewMode(track.type === 'DRUM' ? 'DRUMS' : 'KEYS'); setSeqTarget(0); }}
                         style={{ padding: '6px 16px', borderRadius: 8, cursor: 'pointer', fontSize: 10, letterSpacing: 1, textTransform: 'uppercase',
                             border: `1px solid ${selectedTrackId === track.id ? brass : line}`, background: selectedTrackId === track.id ? brass : '#181410', color: selectedTrackId === track.id ? '#1a0d04' : mute }}>
                         {track.name}
@@ -543,15 +600,17 @@ const DrumMachine: React.FC<DrumMachineProps> = ({ onClose }) => {
 
             {/* SEQUENCER */}
             <div className="flex-none px-3 py-3" style={{ borderBottom: `1px solid ${line}` }}>
-                <div style={{ fontSize: 8.5, color: mute, letterSpacing: 2.5, textTransform: 'uppercase', marginBottom: 8 }}>Sequencer</div>
+                <div style={{ fontSize: 8.5, color: mute, letterSpacing: 2.5, textTransform: 'uppercase', marginBottom: 8 }}>
+                    Sequencer · <span style={{ color: brass }}>{activeTrack.type === 'DRUM' ? PAD_NAMES[seqTarget] : KEYS[seqTarget % 12]}</span>
+                </div>
                 <div className="flex gap-1 overflow-x-auto">
                     {[...Array(16)].map((_, stepIdx) => {
                         const isActive = currentStep === stepIdx;
-                        const hasNote = ((activeTrack.steps[stepIdx] as unknown as number[]) || []).length > 0;
+                        const hasNote = ((activeTrack.steps[stepIdx] as unknown as number[]) || []).includes(seqTarget);
                         return (
                             <div key={stepIdx} className="flex flex-col gap-1 flex-1" style={{ minWidth: 16 }}>
                                 <div style={{ height: 3, borderRadius: 2, background: isActive ? PANEL.phosphor : 'rgba(0,0,0,0.5)' }} />
-                                <button onClick={() => toggleStep(stepIdx, 0)} style={{ height: 34, borderRadius: 5, cursor: 'pointer',
+                                <button onClick={() => toggleStep(stepIdx, seqTarget)} style={{ height: 34, borderRadius: 5, cursor: 'pointer',
                                     border: `1px solid ${hasNote ? brass : line}`, background: hasNote ? `linear-gradient(180deg,${brass},${PANEL.brassDark})` : '#100c08',
                                     boxShadow: isActive ? `0 0 8px ${PANEL.phosphor}55` : 'none', opacity: (stepIdx % 4 === 0 && !hasNote) ? 0.85 : 0.6 }} />
                             </div>
@@ -564,18 +623,22 @@ const DrumMachine: React.FC<DrumMachineProps> = ({ onClose }) => {
             <div className="p-3 flex flex-col gap-4">
                 {viewMode === 'DRUMS' && (
                     <div className="grid grid-cols-4 gap-2 w-full" style={{ maxWidth: 460, margin: '0 auto' }}>
-                        {PAD_NAMES.map((name, i) => (
+                        {PAD_NAMES.map((name, i) => {
+                            const on = activeNotes.includes(i);
+                            const sel = seqTarget === i && !on; // aimed by the sequencer row
+                            return (
                             <button key={i}
                                 onPointerDown={(e) => handleKeyStart(i, e as any)} onPointerUp={(e) => handleKeyStop(i, e as any)} onPointerLeave={(e) => activeNotes.includes(i) && handleKeyStop(i, e as any)}
                                 style={{ aspectRatio: '1', borderRadius: 10, cursor: 'pointer', fontSize: 9.5, letterSpacing: 0.5, textTransform: 'uppercase', touchAction: 'none',
-                                    color: activeNotes.includes(i) ? '#1a0d04' : mute,
-                                    background: activeNotes.includes(i) ? `linear-gradient(180deg,${brass},${PANEL.brassDark})` : 'linear-gradient(180deg,#2a2620,#15110d)',
-                                    border: `1px solid ${activeNotes.includes(i) ? brass : line}`,
-                                    boxShadow: activeNotes.includes(i) ? `0 0 16px ${brass}55` : 'inset 0 1px 0 rgba(255,255,255,0.06), 0 3px 5px rgba(0,0,0,0.4)',
-                                    transform: activeNotes.includes(i) ? 'translateY(2px)' : 'none' }}>
+                                    color: on ? '#1a0d04' : (sel ? ink : mute),
+                                    background: on ? `linear-gradient(180deg,${brass},${PANEL.brassDark})` : 'linear-gradient(180deg,#2a2620,#15110d)',
+                                    border: `1px solid ${on ? brass : (sel ? PANEL.phosphor : line)}`,
+                                    boxShadow: on ? `0 0 16px ${brass}55` : (sel ? `0 0 10px ${PANEL.phosphor}44, inset 0 1px 0 rgba(255,255,255,0.06)` : 'inset 0 1px 0 rgba(255,255,255,0.06), 0 3px 5px rgba(0,0,0,0.4)'),
+                                    transform: on ? 'translateY(2px)' : 'none' }}>
                                 {name}
                             </button>
-                        ))}
+                            );
+                        })}
                     </div>
                 )}
                 {viewMode === 'KEYS' && (

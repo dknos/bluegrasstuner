@@ -12,7 +12,6 @@ import NashvilleNumbersGame from './components/NashvilleNumbersGame';
 import CagedSystemGame from './components/CagedSystemGame';
 import ChordCreator from './components/ChordCreator';
 import Metronome from './components/Metronome';
-import TabScroller from './components/TabScroller';
 import SecretCalculator from './components/SecretCalculator';
 import GuessThatTempoGame from './components/GuessThatTempoGame';
 import GuessTimeSignatureGame from './components/GuessTimeSignatureGame';
@@ -45,7 +44,6 @@ const App: React.FC = () => {
   const [showCagedGame, setShowCagedGame] = useState(false);
   const [showChordCreator, setShowChordCreator] = useState(false);
   const [showMetronome, setShowMetronome] = useState(false);
-  const [showTabScroller, setShowTabScroller] = useState(false);
   const [showCalculator, setShowCalculator] = useState(false);
   const [showTempoGame, setShowTempoGame] = useState(false);
   const [showTimeSigGame, setShowTimeSigGame] = useState(false);
@@ -60,7 +58,7 @@ const App: React.FC = () => {
   const [showWavetable, setShowWavetable] = useState(false);
 
   // Check if any full-screen tool is open
-  const isToolOpen = showSynthsHub || showDrumMachine || showDSynth || showSpectravox || showReese || showOPL3 || showWavetable || showTabScroller || showChordCreator || showCalculator;
+  const isToolOpen = showSynthsHub || showDrumMachine || showDSynth || showSpectravox || showReese || showOPL3 || showWavetable || showChordCreator || showCalculator;
 
   // Skins State
   const [currentSkin, setCurrentSkin] = useState<'original' | 'dark' | 'happy' | 'happy-dark'>('original');
@@ -279,7 +277,6 @@ const App: React.FC = () => {
       setShowReese(false);
       setShowOPL3(false);
       setShowWavetable(false);
-      setShowTabScroller(false);
       setShowChordCreator(false);
       setShowCalculator(false);
       setShowMetronome(false);
@@ -353,7 +350,6 @@ const App: React.FC = () => {
       {showCagedGame && <CagedSystemGame onClose={() => setShowCagedGame(false)} />}
       {showChordCreator && <ChordCreator onClose={() => setShowChordCreator(false)} instrumentName={instrument} tuning={currentTuning} />}
       {showMetronome && <Metronome onClose={() => setShowMetronome(false)} />}
-      {showTabScroller && <TabScroller onClose={() => setShowTabScroller(false)} onToggleMetronome={() => setShowMetronome(!showMetronome)} />}
       {showCalculator && <SecretCalculator onClose={() => setShowCalculator(false)} />}
       {showDrumMachine && <DrumMachine onClose={() => setShowDrumMachine(false)} />}
 
@@ -408,7 +404,6 @@ const App: React.FC = () => {
                   <>
                       <DropdownItem onClick={() => openModal(setShowSynthsHub)} label="Synths Hub (5 Engines)" />
                       <div className="h-px bg-gray-800 my-1"></div>
-                      <DropdownItem onClick={() => openModal(setShowTabScroller)} label="Guitar Tab Auto-Scroller" />
                       <DropdownItem onClick={() => openModal(setShowDrumMachine)} label="Drum Machine + Keys" />
                       <DropdownItem onClick={() => openModal(setShowChordGame)} label="Chord Quiz" />
                       <DropdownItem onClick={() => openModal(setShowTempoGame)} label="Guess the Tempo" />
