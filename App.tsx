@@ -17,14 +17,11 @@ import SecretCalculator from './components/SecretCalculator';
 import GuessThatTempoGame from './components/GuessThatTempoGame';
 import GuessTimeSignatureGame from './components/GuessTimeSignatureGame';
 import DrumMachine from './components/DrumMachine';
-import MatriarchSynth from './components/MatriarchSynth';
 import DSynth from './components/DSynth';
 import Spectravox from './components/Spectravox';
 import ReeseSynth from './components/ReeseSynth';
 import OPL3Synth from './components/OPL3Synth';
-import SerumSynth from './components/SerumSynth';
-import VitalSynth from './components/VitalSynth';
-import PhasePlantSynth from './components/PhasePlantSynth';
+import WavetableSynth from './components/WavetableSynth';
 import OpenJamSimulator from './components/OpenJamSimulator';
 
 const App: React.FC = () => {
@@ -58,17 +55,14 @@ const App: React.FC = () => {
   
   // Synths Hub State
   const [showSynthsHub, setShowSynthsHub] = useState(false);
-  const [showMatriarch, setShowMatriarch] = useState(false);
   const [showDSynth, setShowDSynth] = useState(false);
   const [showSpectravox, setShowSpectravox] = useState(false);
   const [showReese, setShowReese] = useState(false);
   const [showOPL3, setShowOPL3] = useState(false);
-  const [showSerum, setShowSerum] = useState(false);
-  const [showVital, setShowVital] = useState(false);
-  const [showPhasePlant, setShowPhasePlant] = useState(false);
+  const [showWavetable, setShowWavetable] = useState(false);
 
   // Check if any full-screen tool is open
-  const isToolOpen = showSynthsHub || showDrumMachine || showMatriarch || showDSynth || showSpectravox || showReese || showOPL3 || showSerum || showVital || showPhasePlant || showTabScroller || showChordCreator || showCalculator || showJamSimulator;
+  const isToolOpen = showSynthsHub || showDrumMachine || showDSynth || showSpectravox || showReese || showOPL3 || showWavetable || showTabScroller || showChordCreator || showCalculator || showJamSimulator;
 
   // Skins State
   const [currentSkin, setCurrentSkin] = useState<'original' | 'dark' | 'happy' | 'happy-dark'>('original');
@@ -282,14 +276,11 @@ const App: React.FC = () => {
   const closeAllTools = () => {
       setShowSynthsHub(false);
       setShowDrumMachine(false);
-      setShowMatriarch(false);
       setShowDSynth(false);
       setShowSpectravox(false);
       setShowReese(false);
       setShowOPL3(false);
-      setShowSerum(false);
-      setShowVital(false);
-      setShowPhasePlant(false);
+      setShowWavetable(false);
       setShowTabScroller(false);
       setShowChordCreator(false);
       setShowCalculator(false);
@@ -346,14 +337,11 @@ const App: React.FC = () => {
                       <button onClick={() => setShowSynthsHub(false)} aria-label="Close" style={{ width: 34, height: 34, borderRadius: 9, cursor: 'pointer', background: 'rgba(0,0,0,0.35)', border: '1px solid rgba(202,160,82,0.3)', color: 'rgba(232,220,196,0.6)', fontSize: 16 }}>✕</button>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 12, marginTop: 18 }}>
-                      <SynthCard title="Reese Bass" mono="R" desc="Neuro & dubstep supersaw engine with heavy distortion and wobble." onClick={() => { setShowSynthsHub(false); setShowReese(true); }} />
-                      <SynthCard title="OPL3 AdLib" mono="O" desc="1992 Sound Blaster emulator. Authentic DOOM & Duke Nukem FM synthesis." onClick={() => { setShowSynthsHub(false); setShowOPL3(true); }} />
-                      <SynthCard title="Spectravox" mono="S" desc="10-band analog vocoder & spectral drone processor inspired by Moog." onClick={() => { setShowSynthsHub(false); setShowSpectravox(true); }} />
-                      <SynthCard title="D Synth" mono="D" desc="Minimoog Model D replica. 3 oscillators, ladder filter." onClick={() => { setShowSynthsHub(false); setShowDSynth(true); }} />
-                      <SynthCard title="Matriarch" mono="M" desc="4-note paraphonic semi-modular synthesizer with stereo delay." onClick={() => { setShowSynthsHub(false); setShowMatriarch(true); }} />
-                      <SynthCard title="Serum Mini" mono="W" desc="Wavetable synthesizer with 3D warping and 16-voice unison." onClick={() => { setShowSynthsHub(false); setShowSerum(true); }} />
-                      <SynthCard title="Vital" mono="V" desc="Spectral warping synthesizer with deep modulation." onClick={() => { setShowSynthsHub(false); setShowVital(true); }} />
-                      <SynthCard title="Phase Plant" mono="P" desc="Snap-in modular playground: analog, noise, and wavetable generators." onClick={() => { setShowSynthsHub(false); setShowPhasePlant(true); }} />
+                      <SynthCard title="D Synth" mono="D" desc="Minimoog Model D — 3 oscillators, ladder filter, drive. Polyphonic analog lead." onClick={() => { setShowSynthsHub(false); setShowDSynth(true); }} />
+                      <SynthCard title="Wavetable" mono="W" desc="Morphing wavetable with unison supersaw, filter sweeps and LFO. The modern flagship." onClick={() => { setShowSynthsHub(false); setShowWavetable(true); }} />
+                      <SynthCard title="OPL3 AdLib" mono="O" desc="1990s AdLib & Sound Blaster 2-operator FM. Six retro game presets." onClick={() => { setShowSynthsHub(false); setShowOPL3(true); }} />
+                      <SynthCard title="Spectravox" mono="S" desc="Formant vocoder & spectral drone — 10-band vowel morphing inspired by Moog." onClick={() => { setShowSynthsHub(false); setShowSpectravox(true); }} />
+                      <SynthCard title="Reese Bass" mono="R" desc="Neuro supersaw bass with the XY wobble pad and hold latch." onClick={() => { setShowSynthsHub(false); setShowReese(true); }} />
                   </div>
               </div>
           </div>
@@ -374,14 +362,11 @@ const App: React.FC = () => {
       {showJamSimulator && <OpenJamSimulator onClose={() => setShowJamSimulator(false)} />}
       
       {/* Synths (Rendered when active) */}
-      {showMatriarch && <MatriarchSynth onClose={() => setShowMatriarch(false)} />}
       {showDSynth && <DSynth onClose={() => setShowDSynth(false)} />}
       {showSpectravox && <Spectravox onClose={() => setShowSpectravox(false)} />}
       {showReese && <ReeseSynth onClose={() => setShowReese(false)} />}
       {showOPL3 && <OPL3Synth onClose={() => setShowOPL3(false)} />}
-      {showSerum && <SerumSynth onClose={() => setShowSerum(false)} />}
-      {showVital && <VitalSynth onClose={() => setShowVital(false)} />}
-      {showPhasePlant && <PhasePlantSynth onClose={() => setShowPhasePlant(false)} />}
+      {showWavetable && <WavetableSynth onClose={() => setShowWavetable(false)} />}
       
       {/* --- VINTAGE CABINET TUNER (mobile-first) --- */}
       <CabinetTuner
@@ -425,7 +410,7 @@ const App: React.FC = () => {
               )}
               {activeDropdown.type === 'tools' && (
                   <>
-                      <DropdownItem onClick={() => openModal(setShowSynthsHub)} label="Synths Hub (8 Engines)" />
+                      <DropdownItem onClick={() => openModal(setShowSynthsHub)} label="Synths Hub (5 Engines)" />
                       <div className="h-px bg-gray-800 my-1"></div>
                       <DropdownItem onClick={() => openModal(setShowJamSimulator)} label="Open Jam" />
                       <DropdownItem onClick={() => openModal(setShowTabScroller)} label="Guitar Tab Auto-Scroller" />

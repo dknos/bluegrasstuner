@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { SynthShell, Scope, Knob, KnobRow, XYPad, NoteRow, Engrave, PANEL } from './synthkit';
+import { MasterBus, createMasterBus } from '../services/audio/core';
 
 interface ReeseSynthProps {
   onClose: () => void;
@@ -18,15 +19,16 @@ function makeDistortionCurve(amount: number) {
   return curve;
 }
 
-class ReeseEngine {
-    ctx: AudioContext;
-    master: GainNode;
+export class ReeseEngine {
+    ctx: BaseAudioContext;
+    master: MasterBus;
+    voiceGain: GainNode; // gate VCA (was `master` GainNode) — ramped by trigger()
     analyser: AnalyserNode;
-    
+
     // Voices
     oscs: OscillatorNode[] = [];
     gains: GainNode[] = [];
-    
+
     // Processing
     filter: BiquadFilterNode;
     distortion: WaveShaperNode;
@@ -36,13 +38,13 @@ class ReeseEngine {
     lfo: OscillatorNode;
     lfoDepth: GainNode;
 
-    constructor() {
-        this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-        this.master = this.ctx.createGain();
-        this.master.gain.value = 0.0; // Start silent, envelope controlled manually or gate
-        
-        this.analyser = this.ctx.createAnalyser();
-        this.analyser.fftSize = 2048;
+    constructor(ctx: BaseAudioContext) {
+        this.ctx = ctx;
+        this.master = createMasterBus(ctx);
+        this.analyser = this.master.analyser;
+
+        this.voiceGain = this.ctx.createGain();
+        this.voiceGain.gain.value = 0.0; // Start silent, envelope controlled manually or gate
 
         this.filter = this.ctx.createBiquadFilter();
         this.filter.type = 'lowpass';
@@ -57,12 +59,11 @@ class ReeseEngine {
         this.compressor.threshold.value = -20;
         this.compressor.ratio.value = 12;
 
-        // Routing: Oscs -> Dist -> Filter -> Comp -> Master -> Analyser -> Out
+        // Routing: Oscs -> Dist -> Filter -> Comp -> VoiceGain -> MasterBus.input
         this.distortion.connect(this.filter);
         this.filter.connect(this.compressor);
-        this.compressor.connect(this.master);
-        this.master.connect(this.analyser);
-        this.analyser.connect(this.ctx.destination);
+        this.compressor.connect(this.voiceGain);
+        this.voiceGain.connect(this.master.input);
 
         // Reese Generators: Multiple Sawtooths, Detuned
         const detunes = [-15, -5, 0, 5, 15]; // Cents
@@ -125,21 +126,34 @@ class ReeseEngine {
     trigger(active: boolean) {
         const now = this.ctx.currentTime;
         if (active) {
-            this.master.gain.cancelScheduledValues(now);
-            this.master.gain.setValueAtTime(this.master.gain.value, now);
-            this.master.gain.linearRampToValueAtTime(0.8, now + 0.1); // Attack
+            this.voiceGain.gain.cancelScheduledValues(now);
+            this.voiceGain.gain.setValueAtTime(this.voiceGain.gain.value, now);
+            this.voiceGain.gain.linearRampToValueAtTime(0.8, now + 0.1); // Attack
         } else {
-            this.master.gain.cancelScheduledValues(now);
-            this.master.gain.setValueAtTime(this.master.gain.value, now);
-            this.master.gain.exponentialRampToValueAtTime(0.001, now + 0.5); // Release
+            this.voiceGain.gain.cancelScheduledValues(now);
+            this.voiceGain.gain.setValueAtTime(Math.max(0.0001, this.voiceGain.gain.value), now);
+            this.voiceGain.gain.exponentialRampToValueAtTime(0.001, now + 0.5); // Release
         }
     }
-    
+
     setNote(midiNote: number) {
         const freq = 440 * Math.pow(2, (midiNote - 69) / 12);
         this.oscs.forEach(osc => {
             osc.frequency.setTargetAtTime(freq, this.ctx.currentTime, 0.05); // Portamento
         });
+    }
+
+    // SynthEngine-compatible shims (used by the standard audio test + host)
+    noteOn(midi: number, _velocity = 1) { this.setNote(midi); this.trigger(true); }
+    noteOff(_midi: number) { this.trigger(false); }
+
+    connect(dest: AudioNode) { this.master.output.connect(dest); }
+
+    dispose() {
+        this.oscs.forEach(o => { try { o.stop(); } catch { /* already stopped */ } });
+        try { this.lfo.stop(); } catch { /* */ }
+        try { this.voiceGain.disconnect(); } catch { /* */ }
+        try { this.master.output.disconnect(); } catch { /* */ }
     }
 }
 
@@ -166,12 +180,14 @@ const ReeseSynth: React.FC<ReeseSynthProps> = ({ onClose }) => {
     const playing = padDown || latched;
 
     useEffect(() => {
-        const eng = new ReeseEngine();
+        const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const eng = new ReeseEngine(ctx);
+        eng.connect(ctx.destination);
         engine.current = eng;
         setAnalyser(eng.analyser);
         eng.setWobbleRate(rateHz(0.35));
         eng.setWobbleDepth(0.5 * DEPTH_MAX);
-        return () => { eng.ctx.close(); };
+        return () => { eng.dispose(); ctx.close(); };
     }, []);
 
     useEffect(() => { engine.current?.setCutoff(cutoff); }, [cutoff]);
