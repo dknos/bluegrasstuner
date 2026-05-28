@@ -55,7 +55,7 @@ export class ResinxEngine {
   levels: ResinxLevels = { res: [0, 0, 0, 0, 0, 0] };
 
   // master / shared params
-  mode: ResinxMode = 'MODAL';
+  mode: ResinxMode = 'SYMPATHETIC';
   fundamental = 192;          // Hz (resonator root / key)
   scale: ResonatorScale = SCALES[0];
   decay = 2.8;                // T60 seconds (shared by strings + resonators)

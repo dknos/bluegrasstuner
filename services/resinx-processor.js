@@ -112,6 +112,9 @@ class StringVoice {
       prev = prev + brightness * (nz - prev); // pluck-tone pre-lowpass
       this.buf[i] = prev;
     }
+    // park the write head just past the noise so the first reads (at w-delay)
+    // land inside the excitation, not in the zeroed tail of the long buffer.
+    this.w = Math.ceil(this.delay) % this.size;
     this.attackInc = 1 / (Math.max(0.0005, attackSec) * this.sr);
     this.relCoef = Math.exp(-1 / (Math.max(0.005, releaseSec) * this.sr));
     this.envStage = 'attack';

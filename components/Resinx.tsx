@@ -84,13 +84,13 @@ const Resinx: React.FC<Props> = ({ onClose }) => {
   const dirtyRef = useRef(false);
   const arcsRef = useRef<{ x: number; t: number }[]>([]);
   const ampRef = useRef<number[]>([0, 0, 0, 0, 0, 0]);
-  const modeRef = useRef<ResinxMode>('MODAL');
+  const modeRef = useRef<ResinxMode>('SYMPATHETIC');
   const reduceRef = useRef(false);
 
   // discrete state (repaints chrome)
   const [ready, setReady] = useState(false);
   const [loadError, setLoadError] = useState(false);
-  const [mode, setMode] = useState<ResinxMode>('MODAL');
+  const [mode, setMode] = useState<ResinxMode>('SYMPATHETIC');
   const [scaleIdx, setScaleIdx] = useState(0);
   const [note, setNote] = useState('A');
   const [octave, setOctave] = useState(0);
@@ -589,6 +589,10 @@ const Resinx: React.FC<Props> = ({ onClose }) => {
 
         {/* resin ribbon keyboard */}
         <div className="relative shrink-0">
+          <div className="flex justify-between px-3 py-0.5 text-[9px] font-mono text-white/35 border-t border-white/10">
+            <span>{mode === 'SYMPATHETIC' ? 'play the keys (A W S E D F G…) or click / tap' : 'MODAL: excite with KICK / PLUCK / MIC →'}</span>
+            <span>Z / X = octave · Esc = close</span>
+          </div>
           {mode === 'MODAL' && (
             <div className="absolute inset-0 z-10 grid place-items-center text-[10px] font-mono text-white/60 pointer-events-none">
               switch to SYMPATHETIC to play · MODAL = excite with KICK / PLUCK / MIC
