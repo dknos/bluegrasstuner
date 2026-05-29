@@ -77,18 +77,35 @@ export async function fetchSong(file: string): Promise<string> {
 // ── famous community covers — attribution + link-out only ─────────────────────
 export interface Cover {
   title: string; author: string;
-  strudelUrl?: string;   // present only for short ?id links (no embedded code)
+  id?: string;           // strudel.cc ?id -> code lives in Supabase (loadable)
+  strudelUrl?: string;   // open the original on strudel.cc
   sourceUrl: string;
 }
 export const COVERS: Cover[] = [
-  { title: 'Grimes — Music 4 Machines', author: 'KAIXI', strudelUrl: 'https://strudel.cc/?sOc7cVTqJHUU', sourceUrl: 'https://www.reddit.com/r/Grimes/comments/1cqhk68/i_made_a_cover_of_grimes_music_4_machines_with/' },
-  { title: 'Charli XCX — 360', author: 'KAIXI', strudelUrl: 'https://strudel.cc/?2ErYTSUotoaQ', sourceUrl: 'https://x.com/xxkaixi/status/1926482951174234429' },
-  { title: 'Billie Eilish — Birds of a Feather', author: 'saga_3k', strudelUrl: 'https://strudel.cc/?yTnr825wyd9V', sourceUrl: 'https://www.youtube.com/watch?v=_PjSOSoZeSA' },
+  { title: 'Grimes — Music 4 Machines', author: 'KAIXI', id: 'sOc7cVTqJHUU', strudelUrl: 'https://strudel.cc/?sOc7cVTqJHUU', sourceUrl: 'https://www.reddit.com/r/Grimes/comments/1cqhk68/i_made_a_cover_of_grimes_music_4_machines_with/' },
+  { title: 'Charli XCX — 360', author: 'KAIXI', id: '2ErYTSUotoaQ', strudelUrl: 'https://strudel.cc/?2ErYTSUotoaQ', sourceUrl: 'https://x.com/xxkaixi/status/1926482951174234429' },
+  { title: 'Billie Eilish — Birds of a Feather', author: 'saga_3k', id: 'yTnr825wyd9V', strudelUrl: 'https://strudel.cc/?yTnr825wyd9V', sourceUrl: 'https://www.youtube.com/watch?v=_PjSOSoZeSA' },
   { title: 'New Order — Blue Monday', author: 'Lewis', sourceUrl: 'https://www.youtube.com/watch?v=ilF4t0jSBUo' },
   { title: 'Super Mario Bros. — main theme', author: 'Flowhacker', sourceUrl: 'https://www.instagram.com/flowhacker_livecoding/reel/DXXSj6Qs_K2/' },
   { title: 'Undertale — Determination', author: 'Claffystic', sourceUrl: 'https://github.com/Claffystic/StudelProjects' },
   { title: 'Radiohead — Everything in Its Right Place', author: 'codester', sourceUrl: 'https://www.instagram.com/p/DRd44gNCCZB' },
 ];
+
+// strudel.cc short links (?id) store code in this public Supabase table.
+// The anon key is the public client key embedded in strudel.cc itself.
+const SB_URL = 'https://pidxdsxphlhzjnzmifth.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBpZHhkc3hwaGxoempuem1pZnRoIiwicm9sZSI6ImFub24iLCJpYXQiOjE2NTYyMzA1NTYsImV4cCI6MTk3MTgwNjU1Nn0.bqlw7802fsWRnqU5BLYtmXk_k-D1VFmbkHMywWc15NM';
+
+/** Resolve a strudel.cc ?id short link to its pattern code (author's public share). */
+export async function fetchCoverCode(id: string): Promise<string> {
+  const r = await fetch(`${SB_URL}/rest/v1/code_v1?select=code&hash=eq.${encodeURIComponent(id)}`, {
+    headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` },
+  });
+  if (!r.ok) throw new Error(`load failed (${r.status})`);
+  const data = await r.json();
+  if (!data?.[0]?.code) throw new Error('not found');
+  return data[0].code as string;
+}
 
 // ── tutorials / learning ──────────────────────────────────────────────────────
 export interface Link { title: string; url: string; }
