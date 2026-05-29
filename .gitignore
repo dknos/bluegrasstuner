@@ -12,3 +12,9 @@ dist-ssr
 
 # Rust/WASM build artifacts
 rust/pitch/target
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+!.env.example
