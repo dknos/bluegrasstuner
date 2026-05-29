@@ -23,6 +23,7 @@ import OPL3Synth from './components/OPL3Synth';
 import WavetableSynth from './components/WavetableSynth';
 import Resinx from './components/Resinx';
 import Knurl from './components/Knurl';
+import Strudel from './components/Strudel';
 
 const App: React.FC = () => {
   const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
@@ -60,9 +61,10 @@ const App: React.FC = () => {
   const [showWavetable, setShowWavetable] = useState(false);
   const [showResinx, setShowResinx] = useState(false);
   const [showKnurl, setShowKnurl] = useState(false);
+  const [showStrudel, setShowStrudel] = useState(false);
 
   // Check if any full-screen tool is open
-  const isToolOpen = showSynthsHub || showDrumMachine || showDSynth || showSpectravox || showReese || showOPL3 || showWavetable || showResinx || showKnurl || showChordCreator || showCalculator;
+  const isToolOpen = showSynthsHub || showDrumMachine || showDSynth || showSpectravox || showReese || showOPL3 || showWavetable || showResinx || showKnurl || showStrudel || showChordCreator || showCalculator;
 
   // Skins State
   const [currentSkin, setCurrentSkin] = useState<'original' | 'dark' | 'happy' | 'happy-dark'>('original');
@@ -283,6 +285,7 @@ const App: React.FC = () => {
       setShowWavetable(false);
       setShowResinx(false);
       setShowKnurl(false);
+      setShowStrudel(false);
       setShowChordCreator(false);
       setShowCalculator(false);
       setShowMetronome(false);
@@ -344,6 +347,7 @@ const App: React.FC = () => {
                       <SynthCard title="Reese Bass" mono="R" desc="Neuro supersaw bass with the XY wobble pad and hold latch." onClick={() => { setShowSynthsHub(false); setShowReese(true); }} />
                       <SynthCard title="Resinx" mono="X" desc="Microtonal Karplus-Strong resonator. 6 tuned voices on pure ratios — play it or ring out a kick, pluck, or mic." onClick={() => { setShowSynthsHub(false); setShowResinx(true); }} />
                       <SynthCard title="Knurl" mono="K" desc="Physical-modeling groovebox. Synthesized drums, sample-accurate sequencer with parameter locks, swing & probability, mix-ready master bus." onClick={() => { setShowSynthsHub(false); setShowKnurl(true); }} />
+                      <SynthCard title="Strudel" mono="//" desc="Live-coding pattern engine. Write algorithmic beats & melodies in code, run them live. Powered by Strudel (AGPL)." onClick={() => { setShowSynthsHub(false); setShowStrudel(true); }} />
                   </div>
               </div>
           </div>
@@ -369,6 +373,7 @@ const App: React.FC = () => {
       {showWavetable && <WavetableSynth onClose={() => setShowWavetable(false)} />}
       {showResinx && <Resinx onClose={() => setShowResinx(false)} />}
       {showKnurl && <Knurl onClose={() => setShowKnurl(false)} />}
+      {showStrudel && <Strudel onClose={() => setShowStrudel(false)} />}
 
       {/* --- VINTAGE CABINET TUNER (mobile-first) --- */}
       <CabinetTuner
@@ -412,7 +417,7 @@ const App: React.FC = () => {
               )}
               {activeDropdown.type === 'tools' && (
                   <>
-                      <DropdownItem onClick={() => openModal(setShowSynthsHub)} label="Synths Hub (7 Engines)" />
+                      <DropdownItem onClick={() => openModal(setShowSynthsHub)} label="Synths Hub (8 Engines)" />
                       <div className="h-px bg-gray-800 my-1"></div>
                       <DropdownItem onClick={() => openModal(setShowDrumMachine)} label="Drum Machine + Keys" />
                       <DropdownItem onClick={() => openModal(setShowChordGame)} label="Chord Quiz" />
