@@ -201,6 +201,13 @@ export class KnurlEngine {
     this.node?.port.postMessage({ type: 'trigger', index, vel });
   }
 
+  /** Schedule a track to fire at absolute AudioContext time `time` (sample-accurate
+   *  in the worklet). Used by the Strudel bridge — Strudel is the clock. `freq` 0 =
+   *  use the track's own tuning. */
+  triggerAt(index: number, vel: number, time: number, freq = 0): void {
+    this.node?.port.postMessage({ type: 'triggerAt', index, vel, time, freq });
+  }
+
   dispose(): void {
     this.setPlaying(false);
     try { this.node?.disconnect(); } catch {}

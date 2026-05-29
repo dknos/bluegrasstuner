@@ -285,6 +285,9 @@ class KnurlProcessor extends AudioWorkletProcessor {
     this.step = 0;
     this.toNext = 0;        // fractional samples to next step boundary
     this.lastPostedStep = -1;
+    // externally-scheduled triggers (Strudel bridge): {time, index, vel, freq}
+    // fired at the exact sample offset when the worklet clock reaches `time`.
+    this.sched = [];
 
     // master
     this.masterGain = 0.9; this.masterGainT = 0.9;
@@ -368,15 +371,27 @@ class KnurlProcessor extends AudioWorkletProcessor {
         // audition a single track now (UI tap), respects current params
         this.auditionStep(m.index, m.vel ?? 1);
         break;
+      case 'triggerAt':
+        // schedule a trigger at absolute ctx time `m.time` (Strudel bridge).
+        if (this.tracks[m.index]) {
+          this.sched.push({ time: m.time, index: m.index, vel: m.vel ?? 1, freq: m.freq || 0 });
+          if (this.sched.length > 256) this.sched.shift(); // runaway guard
+        }
+        break;
     }
   }
 
-  auditionStep(t, vel) {
+  // fire one track now, optional freq override (Hz; 0 = use track tuning)
+  triggerVoice(t, vel, freq) {
     const tr = this.tracks[t];
-    if (t === 0) this.kick.trigger(tr.freq, tr.decay, tr.snap, tr.drive, vel * tr.level, tr.pan);
-    else this.modal[t - 1].trigger(tr.freq, tr.decay, tr.material, tr.snap, tr.noise, tr.tone, tr.drive, vel * tr.level, tr.pan);
+    if (!tr) return;
+    const f = freq && freq > 0 ? freq : tr.freq;
+    if (t === 0) this.kick.trigger(f, tr.decay, tr.snap, tr.drive, vel * tr.level, tr.pan);
+    else this.modal[t - 1].trigger(f, tr.decay, tr.material, tr.snap, tr.noise, tr.tone, tr.drive, vel * tr.level, tr.pan);
     this.energy[t] = Math.min(1, this.energy[t] + vel);
   }
+
+  auditionStep(t, vel) { this.triggerVoice(t, vel, 0); }
 
   process(_inputs, outputs) {
     const out = outputs[0];
@@ -384,7 +399,25 @@ class KnurlProcessor extends AudioWorkletProcessor {
     const outR = out[1] || out[0];
     const n = outL.length;
 
+    // collect externally-scheduled (Strudel) triggers due this quantum, by sample offset
+    let due = null, di = 0;
+    if (this.sched.length) {
+      const t0 = currentTime, tEnd = t0 + n / this.sr;
+      due = [];
+      for (let i = this.sched.length - 1; i >= 0; i--) {
+        const ev = this.sched[i];
+        if (ev.time < tEnd) {
+          let off = Math.round((ev.time - t0) * this.sr);
+          if (off < 0) off = 0; else if (off >= n) off = n - 1;
+          due.push({ off, index: ev.index, vel: ev.vel, freq: ev.freq });
+          this.sched.splice(i, 1);
+        }
+      }
+      if (due.length) due.sort((a, b) => a.off - b.off); else due = null;
+    }
+
     for (let s = 0; s < n; s++) {
+      if (due) { while (di < due.length && due[di].off === s) { this.triggerVoice(due[di].index, due[di].vel, due[di].freq); di++; } }
       // smooth master params
       this.masterGain += (this.masterGainT - this.masterGain) * 0.002;
       this.masterDrive += (this.masterDriveT - this.masterDrive) * 0.002;
