@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createStrudelBridge, StrudelBridge } from '../services/strudel-bridge';
+import AudioViz from './AudioViz';
 
 // ──────────────────────────────────────────────────────────────────────────
 // STRUDEL — live-coding pattern engine, wired to play OUR synths.
@@ -73,10 +74,7 @@ const SNIPPETS: { label: string; code: string }[] = [
 ];
 
 const Strudel: React.FC<Props> = ({ onClose }) => {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const taRef = useRef<HTMLTextAreaElement | null>(null);
-  const rafRef = useRef(0);
-  const dprRef = useRef(1);
   const mountedRef = useRef(true);
   const codeRef = useRef<string>(PRESETS[0].code);
   const bridgeRef = useRef<StrudelBridge | null>(null);
@@ -109,38 +107,6 @@ const Strudel: React.FC<Props> = ({ onClose }) => {
       }
     })();
 
-    const nativeBuf = new Float32Array(1024);
-    const draw = () => {
-      rafRef.current = requestAnimationFrame(draw);
-      const cv = canvasRef.current; if (!cv) return;
-      const c = cv.getContext('2d'); if (!c) return;
-      const dpr = dprRef.current;
-      c.setTransform(dpr, 0, 0, dpr, 0, 0);
-      const w = cv.width / dpr, h = cv.height / dpr;
-      c.fillStyle = '#070b07'; c.fillRect(0, 0, w, h);
-      c.strokeStyle = 'rgba(143,209,122,0.08)'; c.lineWidth = 1;
-      c.beginPath(); c.moveTo(0, h / 2); c.lineTo(w, h / 2); c.stroke();
-      // native Strudel sounds (green)
-      let nd: Float32Array | null = null;
-      try { nd = mod?.getAnalyzerData('time', 1) ?? null; } catch { nd = null; }
-      const trace = (data: Float32Array | null, color: string) => {
-        if (!data || !data.length) return;
-        c.strokeStyle = color; c.lineWidth = 2; c.shadowColor = color; c.shadowBlur = 7;
-        c.beginPath();
-        for (let i = 0; i < data.length; i++) {
-          const x = (i / data.length) * w;
-          const y = h / 2 + (data[i] || 0) * h * 0.45;
-          i ? c.lineTo(x, y) : c.moveTo(x, y);
-        }
-        c.stroke(); c.shadowBlur = 0;
-      };
-      trace(nd, '#8fd17a');
-      // our KNURL drums (brass) — bypass superdough, tapped via the bridge analyser
-      const ba = bridgeRef.current?.analyser;
-      if (ba) { ba.getFloatTimeDomainData(nativeBuf); trace(nativeBuf, '#caa052'); }
-    };
-    rafRef.current = requestAnimationFrame(draw);
-
     const onKey = (ev: KeyboardEvent) => {
       if (ev.key === 'Escape') { onClose(); return; }
       if ((ev.ctrlKey || ev.metaKey) && ev.key === 'Enter') { ev.preventDefault(); run(); }
@@ -150,24 +116,10 @@ const Strudel: React.FC<Props> = ({ onClose }) => {
 
     return () => {
       mountedRef.current = false;
-      cancelAnimationFrame(rafRef.current);
       window.removeEventListener('keydown', onKey);
       try { mod?.hush(); } catch {}
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    const cv = canvasRef.current; if (!cv) return;
-    const ro = new ResizeObserver(() => {
-      const r = cv.getBoundingClientRect();
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      dprRef.current = dpr;
-      cv.width = Math.max(1, Math.floor(r.width * dpr));
-      cv.height = Math.max(1, Math.floor(r.height * dpr));
-    });
-    ro.observe(cv);
-    return () => ro.disconnect();
   }, []);
 
   const run = async () => {
@@ -278,7 +230,9 @@ const Strudel: React.FC<Props> = ({ onClose }) => {
             aria-label="Strudel code editor" />
           {err && <div className="px-4 py-1.5 text-[11px] font-mono text-red-300 border-t" style={{ borderColor: 'rgba(168,71,42,0.3)', background: 'rgba(40,16,16,0.5)' }}>⚠ {err}</div>}
           <div className="shrink-0 px-4 pt-2" style={{ borderTop: '1px solid rgba(143,209,122,0.12)' }}>
-            <canvas ref={canvasRef} style={{ width: '100%', height: 64, display: 'block' }} />
+            <AudioViz getAnalyser={() => bridgeRef.current?.analyser ?? null}
+              getNativeFreq={() => { try { return mod?.getAnalyzerData('frequency', 1) ?? null; } catch { return null; } }}
+              height={140} />
           </div>
         </div>
 
