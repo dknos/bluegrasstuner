@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createStrudelBridge, StrudelBridge } from '../services/strudel-bridge';
 import AudioViz from './AudioViz';
+import StrudelExplore from './StrudelExplore';
 
 // ──────────────────────────────────────────────────────────────────────────
 // STRUDEL — live-coding pattern engine, wired to play OUR synths.
@@ -87,6 +88,7 @@ const Strudel: React.FC<Props> = ({ onClose }) => {
   const [preset, setPreset] = useState(PRESETS[0].name);
   const [tempo, setTempo] = useState(0.9);
   const [drums, setDrums] = useState<{ name: string; label: string }[]>([]);
+  const [showExplore, setShowExplore] = useState(false);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -94,7 +96,14 @@ const Strudel: React.FC<Props> = ({ onClose }) => {
       try {
         if (!mod) mod = (await import('@strudel/web')) as unknown as StrudelMod;
         if (!inited) {
-          mod.initStrudel({ prebake: () => mod!.samples('github:tidalcycles/dirt-samples') });
+          mod.initStrudel({
+            prebake: async () => {
+              await mod!.samples('github:tidalcycles/dirt-samples');
+              // GM soundfonts (gm_*) so loaded community tracks' melodic parts play
+              try { const sf: any = await import('@strudel/soundfonts'); await sf.registerSoundfonts?.(); }
+              catch (e) { console.warn('soundfonts unavailable', e); }
+            },
+          });
           inited = true;
         }
         // build the bridge on Strudel's OWN context (shared clock = tight timing)
@@ -134,6 +143,17 @@ const Strudel: React.FC<Props> = ({ onClose }) => {
   const stop = () => { try { mod?.hush(); } catch {} setPlaying(false); };
 
   const onCode = (v: string) => { setCode(v); codeRef.current = v; setPreset(''); };
+
+  // load a track's code from the Explore panel into the editor (user hits Run)
+  const loadTrack = (c: string, _title: string) => {
+    setCode(c); codeRef.current = c; setPreset(''); setErr(null); setShowExplore(false);
+  };
+  // load a sample bank (samples('github:…')) — the click is the audio gesture
+  const loadSampleBank = async (repo: string) => {
+    if (!mod) throw new Error('engine not ready');
+    await mod.getAudioContext().resume();
+    await mod.samples(repo);
+  };
   const loadPreset = (p: { name: string; code: string }) => {
     setCode(p.code); codeRef.current = p.code; setPreset(p.name); setErr(null);
     const m = p.code.match(/setcps\(([\d.]+)\)/); if (m) setTempo(parseFloat(m[1]));
@@ -195,6 +215,8 @@ const Strudel: React.FC<Props> = ({ onClose }) => {
               className="w-20" style={{ accentColor: '#8fd17a' }} aria-label="tempo (cps)" />
             <span className="text-[9px] font-mono tabular-nums" style={{ color: '#cdeac0' }}>{tempo.toFixed(2)}</span>
           </label>
+          <button onClick={() => setShowExplore(true)} className="shrink-0 px-2.5 py-1 rounded text-[10px] font-mono font-bold"
+            style={{ background: 'rgba(202,160,82,0.2)', color: '#e6cf95', border: '1px solid rgba(202,160,82,0.4)' }}>⊕ explore</button>
           <div className="flex gap-1.5">
             {PRESETS.map((p) => (
               <button key={p.name} onClick={() => loadPreset(p)} aria-pressed={preset === p.name}
@@ -242,6 +264,8 @@ const Strudel: React.FC<Props> = ({ onClose }) => {
           <span>powered by Strudel (AGPL-3.0) · ⌘↵ run · ⌘. hush</span>
           <a href="https://github.com/dknos/bluegrasstuner" target="_blank" rel="noreferrer" style={{ color: 'rgba(143,209,122,0.7)', textDecoration: 'underline' }}>source</a>
         </div>
+
+        {showExplore && <StrudelExplore onClose={() => setShowExplore(false)} onLoad={loadTrack} loadSample={loadSampleBank} />}
       </div>
     </div>
   );
