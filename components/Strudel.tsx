@@ -79,6 +79,10 @@ const Strudel: React.FC<Props> = ({ onClose }) => {
   const mountedRef = useRef(true);
   const codeRef = useRef<string>(PRESETS[0].code);
   const bridgeRef = useRef<StrudelBridge | null>(null);
+  const readyRef = useRef(false);
+  const playingRef = useRef(false);
+  const liveRef = useRef(true);              // auto-run edits while looping
+  const liveTimer = useRef<number>(0);
 
   const [ready, setReady] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -89,6 +93,7 @@ const Strudel: React.FC<Props> = ({ onClose }) => {
   const [tempo, setTempo] = useState(0.9);
   const [drums, setDrums] = useState<{ name: string; label: string }[]>([]);
   const [showExplore, setShowExplore] = useState(false);
+  const [live, setLive] = useState(true);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -118,7 +123,7 @@ const Strudel: React.FC<Props> = ({ onClose }) => {
         // build the bridge on Strudel's OWN context (shared clock = tight timing)
         if (!bridge) bridge = await createStrudelBridge(mod);
         bridgeRef.current = bridge;
-        if (mountedRef.current) { setDrums(bridge.sounds); setReady(true); }
+        if (mountedRef.current) { setDrums(bridge.sounds); setReady(true); readyRef.current = true; }
       } catch (e: any) {
         console.error('Strudel failed to load', e);
         if (mountedRef.current) setLoadError(String(e?.message || e));
@@ -141,21 +146,33 @@ const Strudel: React.FC<Props> = ({ onClose }) => {
   }, []);
 
   const run = async () => {
-    if (!mod || !ready) return;
+    if (!mod || !readyRef.current) return;
     try {
       setErr(null);
       await mod.getAudioContext().resume();
       await mod.evaluate(ANALYZE + codeRef.current);
-      setPlaying(true);
+      setPlaying(true); playingRef.current = true;
     } catch (e: any) { setErr(String(e?.message || e)); }
   };
-  const stop = () => { try { mod?.hush(); } catch {} setPlaying(false); };
+  const stop = () => {
+    try { mod?.hush(); } catch {}
+    setPlaying(false); playingRef.current = false;
+    window.clearTimeout(liveTimer.current);
+  };
 
-  const onCode = (v: string) => { setCode(v); codeRef.current = v; setPreset(''); };
+  // edit -> if looping + live, re-evaluate after a short debounce (the fun part)
+  const onCode = (v: string) => {
+    setCode(v); codeRef.current = v; setPreset('');
+    if (playingRef.current && liveRef.current) {
+      window.clearTimeout(liveTimer.current);
+      liveTimer.current = window.setTimeout(() => { run(); }, 650);
+    }
+  };
 
-  // load a track's code from the Explore panel into the editor (user hits Run)
+  // load a track from Explore -> auto-play so it loops immediately (errors surface)
   const loadTrack = (c: string, _title: string) => {
     setCode(c); codeRef.current = c; setPreset(''); setErr(null); setShowExplore(false);
+    run();
   };
   // load a sample bank (samples('github:…')) — the click is the audio gesture
   const loadSampleBank = async (repo: string) => {
@@ -166,6 +183,7 @@ const Strudel: React.FC<Props> = ({ onClose }) => {
   const loadPreset = (p: { name: string; code: string }) => {
     setCode(p.code); codeRef.current = p.code; setPreset(p.name); setErr(null);
     const m = p.code.match(/setcps\(([\d.]+)\)/); if (m) setTempo(parseFloat(m[1]));
+    run();   // tap a preset = hear it loop immediately
   };
 
   // insert text at the textarea cursor (palette tokens / snippets)
@@ -205,19 +223,24 @@ const Strudel: React.FC<Props> = ({ onClose }) => {
         {/* header */}
         <div className="flex items-center gap-3 px-4 py-3 border-b" style={{ borderColor: 'rgba(143,209,122,0.18)' }}>
           <span className="text-xl font-bold tracking-[0.3em]" style={{ color: '#8fd17a', fontFamily: '"JetBrains Mono",monospace' }}>STRUDEL</span>
-          <span className="text-[10px] font-mono hidden md:inline" style={{ color: 'rgba(143,209,122,0.5)' }}>live patterns · plays KNURL drums</span>
+          <span className="text-[10px] font-mono hidden md:inline" style={{ color: 'rgba(143,209,122,0.5)' }}>edit while it loops · plays KNURL drums</span>
           <div className="ml-auto flex items-center gap-2">
+            <button onClick={() => { const v = !live; setLive(v); liveRef.current = v; }} title="auto-apply edits while looping"
+              className="px-2 py-1.5 rounded text-[10px] font-mono font-bold"
+              style={{ background: live ? 'rgba(143,209,122,0.22)' : 'rgba(255,255,255,0.05)', color: live ? '#cdeac0' : 'rgba(143,209,122,0.5)', border: '1px solid rgba(143,209,122,0.25)' }}>
+              {live ? '◉ live' : '○ live'}
+            </button>
             <button onClick={run} disabled={!ready} className="px-3 py-1.5 rounded text-[12px] font-bold font-mono"
-              style={{ background: ready ? '#8fd17a' : '#2a352a', color: ready ? '#08120a' : '#5a6a5a', cursor: ready ? 'pointer' : 'default' }}>▶ run {sub('⌘↵')}</button>
+              style={{ background: ready ? '#8fd17a' : '#2a352a', color: ready ? '#08120a' : '#5a6a5a', cursor: ready ? 'pointer' : 'default' }}>▶ play {sub('⌘↵')}</button>
             <button onClick={stop} className="px-3 py-1.5 rounded text-[12px] font-bold font-mono"
-              style={{ background: '#241a1a', color: '#e6b0a0', border: '1px solid rgba(168,71,42,0.4)' }}>■ hush</button>
+              style={{ background: '#241a1a', color: '#e6b0a0', border: '1px solid rgba(168,71,42,0.4)' }}>■ stop</button>
             <button onClick={onClose} aria-label="Close" className="text-2xl leading-none ml-1" style={{ color: 'rgba(143,209,122,0.6)' }}>×</button>
           </div>
         </div>
 
         {/* toolbar: tempo + presets */}
         <div className="flex items-center gap-3 px-4 py-2 border-b overflow-x-auto" style={{ borderColor: 'rgba(143,209,122,0.1)' }}>
-          <span className="text-[9px] font-mono shrink-0" style={{ color: 'rgba(143,209,122,0.45)' }}>{playing ? '● playing' : '○ idle'}</span>
+          <span className="text-[9px] font-mono shrink-0" style={{ color: playing ? '#8fd17a' : 'rgba(143,209,122,0.45)' }}>{playing ? (live ? '◉ looping · edits live' : '● looping') : '○ idle'}</span>
           <label className="flex items-center gap-1.5 shrink-0">
             <span className="text-[9px] font-mono" style={{ color: 'rgba(143,209,122,0.5)' }}>tempo</span>
             <input type="range" min={0.3} max={2} step={0.05} value={tempo} onChange={(e) => changeTempo(parseFloat(e.target.value))}
@@ -270,7 +293,7 @@ const Strudel: React.FC<Props> = ({ onClose }) => {
         {/* AGPL §13 source notice */}
         <div className="shrink-0 flex items-center justify-between px-4 py-1.5 text-[9px] font-mono border-t"
           style={{ borderColor: 'rgba(143,209,122,0.12)', color: 'rgba(143,209,122,0.4)' }}>
-          <span>powered by Strudel (AGPL-3.0) · ⌘↵ run · ⌘. hush</span>
+          <span>powered by Strudel (AGPL-3.0) · ◉ live = edits loop in as you type · ⌘↵ play · ⌘. stop</span>
           <a href="https://github.com/dknos/bluegrasstuner" target="_blank" rel="noreferrer" style={{ color: 'rgba(143,209,122,0.7)', textDecoration: 'underline' }}>source</a>
         </div>
 
