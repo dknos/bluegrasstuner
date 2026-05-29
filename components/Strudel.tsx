@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { createStrudelBridge, StrudelBridge } from '../services/strudel-bridge';
+import { StrudelBridge } from '../services/strudel-bridge';
+import { getStrudelRuntime, StrudelMod } from '../services/strudel-runtime';
 import AudioViz from './AudioViz';
 import StrudelExplore from './StrudelExplore';
 
@@ -15,18 +16,8 @@ import StrudelExplore from './StrudelExplore';
 
 interface Props { onClose: () => void; }
 
-type StrudelMod = {
-  initStrudel: (opts?: any) => void;
-  evaluate: (code: string) => Promise<unknown>;
-  hush: () => void;
-  getAudioContext: () => AudioContext;
-  getAnalyzerData: (type?: 'time' | 'frequency', id?: number | string) => Float32Array;
-  registerSound: (key: string, onTrigger: any, data?: any) => void;
-  samples: (url: any, base?: any, opts?: any) => Promise<void>;
-};
-// module-scoped singletons (survive remounts; engine + sounds registered once)
+// module-scoped refs to the ONE shared runtime (see services/strudel-runtime.ts)
 let mod: StrudelMod | null = null;
-let inited = false;
 let bridge: StrudelBridge | null = null;
 
 const ANALYZE = 'all(x => x.analyze(1))\n';
@@ -99,29 +90,8 @@ const Strudel: React.FC<Props> = ({ onClose }) => {
     mountedRef.current = true;
     (async () => {
       try {
-        if (!mod) mod = (await import('@strudel/web')) as unknown as StrudelMod;
-        if (!inited) {
-          // mirror strudel.cc's prebake so .bank("RolandTR909"), piano, vcsl, gm_*
-          // all resolve (the community tracks rely on these). Manifests are light;
-          // individual samples still stream on first use. Each load fails soft.
-          const CDN = 'https://strudel.b-cdn.net';
-          mod.initStrudel({
-            prebake: async () => {
-              const ld = (a: string, b?: string, o?: any) => mod!.samples(a, b, o).catch((e) => console.warn('prebake', a, e));
-              await Promise.all([
-                ld(`${CDN}/tidal-drum-machines.json`, `${CDN}/tidal-drum-machines/machines/`, { prebake: true, tag: 'drum-machines' }),
-                ld(`${CDN}/piano.json`, `${CDN}/piano/`, { prebake: true }),
-                ld(`${CDN}/vcsl.json`, `${CDN}/VCSL/`, { prebake: true }),
-                ld(`${CDN}/uzu-drumkit.json`, `${CDN}/uzu-drumkit/`, { prebake: true, tag: 'drum-machines' }),
-                ld('github:tidalcycles/dirt-samples'),
-                (async () => { try { const sf: any = await import('@strudel/soundfonts'); await sf.registerSoundfonts?.(); } catch (e) { console.warn('soundfonts unavailable', e); } })(),
-              ]);
-            },
-          });
-          inited = true;
-        }
-        // build the bridge on Strudel's OWN context (shared clock = tight timing)
-        if (!bridge) bridge = await createStrudelBridge(mod);
+        const rt = await getStrudelRuntime();
+        mod = rt.mod; bridge = rt.bridge;
         bridgeRef.current = bridge;
         if (mountedRef.current) { setDrums(bridge.sounds); setReady(true); readyRef.current = true; }
       } catch (e: any) {

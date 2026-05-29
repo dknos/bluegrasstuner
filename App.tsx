@@ -24,6 +24,7 @@ import WavetableSynth from './components/WavetableSynth';
 import Resinx from './components/Resinx';
 import Knurl from './components/Knurl';
 import Strudel from './components/Strudel';
+import Phaseloom from './components/Phaseloom';
 
 const App: React.FC = () => {
   const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
@@ -62,9 +63,10 @@ const App: React.FC = () => {
   const [showResinx, setShowResinx] = useState(false);
   const [showKnurl, setShowKnurl] = useState(false);
   const [showStrudel, setShowStrudel] = useState(false);
+  const [showPhaseloom, setShowPhaseloom] = useState(false);
 
   // Check if any full-screen tool is open
-  const isToolOpen = showSynthsHub || showDrumMachine || showDSynth || showSpectravox || showReese || showOPL3 || showWavetable || showResinx || showKnurl || showStrudel || showChordCreator || showCalculator;
+  const isToolOpen = showSynthsHub || showDrumMachine || showDSynth || showSpectravox || showReese || showOPL3 || showWavetable || showResinx || showKnurl || showStrudel || showPhaseloom || showChordCreator || showCalculator;
 
   // Skins State
   const [currentSkin, setCurrentSkin] = useState<'original' | 'dark' | 'happy' | 'happy-dark'>('original');
@@ -286,6 +288,7 @@ const App: React.FC = () => {
       setShowResinx(false);
       setShowKnurl(false);
       setShowStrudel(false);
+      setShowPhaseloom(false);
       setShowChordCreator(false);
       setShowCalculator(false);
       setShowMetronome(false);
@@ -335,7 +338,7 @@ const App: React.FC = () => {
                   <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 6 }}>
                       <div>
                           <h1 style={{ fontFamily: '"DM Serif Display", serif', fontSize: 30, color: '#e8dcc4', margin: 0, letterSpacing: 0.5 }}>Synth Cabinet</h1>
-                          <p style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 9.5, color: '#caa052', letterSpacing: 3, textTransform: 'uppercase', margin: '4px 0 0' }}>Eight Analog Engines</p>
+                          <p style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 9.5, color: '#caa052', letterSpacing: 3, textTransform: 'uppercase', margin: '4px 0 0' }}>Nine Engines</p>
                       </div>
                       <button onClick={() => setShowSynthsHub(false)} aria-label="Close" style={{ width: 34, height: 34, borderRadius: 9, cursor: 'pointer', background: 'rgba(0,0,0,0.35)', border: '1px solid rgba(202,160,82,0.3)', color: 'rgba(232,220,196,0.6)', fontSize: 16 }}>✕</button>
                   </div>
@@ -348,6 +351,7 @@ const App: React.FC = () => {
                       <SynthCard title="Resinx" mono="X" desc="Microtonal Karplus-Strong resonator. 6 tuned voices on pure ratios — play it or ring out a kick, pluck, or mic." onClick={() => { setShowSynthsHub(false); setShowResinx(true); }} />
                       <SynthCard title="Knurl" mono="K" desc="Physical-modeling groovebox. Synthesized drums, sample-accurate sequencer with parameter locks, swing & probability, mix-ready master bus." onClick={() => { setShowSynthsHub(false); setShowKnurl(true); }} />
                       <SynthCard title="Strudel" mono="//" desc="Live-coding pattern engine. Write algorithmic beats & melodies in code, run them live. Powered by Strudel (AGPL)." onClick={() => { setShowSynthsHub(false); setShowStrudel(true); }} />
+                      <SynthCard title="Phaseloom" mono="▦" desc="Grid-first groovebox that writes Strudel. Toggle pads, solo & mute lanes, watch the live code it emits — plays the KNURL drums. (AGPL)" onClick={() => { setShowSynthsHub(false); setShowPhaseloom(true); }} />
                   </div>
               </div>
           </div>
@@ -374,6 +378,7 @@ const App: React.FC = () => {
       {showResinx && <Resinx onClose={() => setShowResinx(false)} />}
       {showKnurl && <Knurl onClose={() => setShowKnurl(false)} />}
       {showStrudel && <Strudel onClose={() => setShowStrudel(false)} />}
+      {showPhaseloom && <Phaseloom onClose={() => setShowPhaseloom(false)} />}
 
       {/* --- VINTAGE CABINET TUNER (mobile-first) --- */}
       <CabinetTuner
@@ -417,7 +422,7 @@ const App: React.FC = () => {
               )}
               {activeDropdown.type === 'tools' && (
                   <>
-                      <DropdownItem onClick={() => openModal(setShowSynthsHub)} label="Synths Hub (8 Engines)" />
+                      <DropdownItem onClick={() => openModal(setShowSynthsHub)} label="Synths Hub (9 Engines)" />
                       <div className="h-px bg-gray-800 my-1"></div>
                       <DropdownItem onClick={() => openModal(setShowDrumMachine)} label="Drum Machine + Keys" />
                       <DropdownItem onClick={() => openModal(setShowChordGame)} label="Chord Quiz" />
