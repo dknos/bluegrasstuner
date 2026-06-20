@@ -74,7 +74,7 @@ const App: React.FC = () => {
   // Tuner Cabinet (gauge face style) — persisted
   const [currentCabinet, setCurrentCabinet] = useState<Cabinet>(() => {
     const saved = typeof localStorage !== 'undefined' ? localStorage.getItem('bgt-cabinet') : null;
-    const valid: Cabinet[] = ['heirloom', 'studio', 'workshop', 'happygirl'];
+    const valid: Cabinet[] = ['heirloom', 'studio', 'workshop', 'happygirl', "festival", "pocket-watch", "hymnal", "radio", "split-flap", "banjo-head", "weathervane", "apothecary", "oscilloscope", "spirit-level", "turntable", "pressure-gauge", "semaphore", "mason-jar", "sundial", "metronome", "balance", "plumb-bob", "moon-dial", "high-striker", "lantern"];
     return valid.includes(saved as Cabinet) ? (saved as Cabinet) : 'heirloom';
   });
   useEffect(() => {
@@ -383,7 +383,7 @@ const App: React.FC = () => {
       {/* --- VINTAGE CABINET TUNER (mobile-first) --- */}
       <CabinetTuner
         cabinet={currentCabinet}
-        instruments={['Guitar', 'Banjo', 'Violin', 'Mandolin', 'Bass', 'Ukulele'].filter(k => INSTRUMENT_DATA[k])}
+        instruments={['Guitar', 'Banjo', 'Violin', 'Bass', 'Mandolin', 'Ukulele'].filter(k => INSTRUMENT_DATA[k])}
         instrument={instrument}
         tuningKeys={Object.keys(availableTunings)}
         tuningName={tuningName}
