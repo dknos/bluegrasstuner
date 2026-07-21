@@ -5,7 +5,11 @@ detection with three selectable vintage "cabinet" tuner faces, plus a suite of
 tools: synths, drum machine, metronome, chord/tuning charts, tab scroller, and
 ear-training games.
 
-Lives at **[bluegrasstuner.com](https://bluegrasstuner.com)**.
+**[Open Bluegrass Tuner](https://bluegrasstuner.com)**
+
+![Bluegrass Tuner heirloom cabinet](docs/showcase/tuner-heirloom.webp)
+
+The interface treats the tuner like a small piece of music-room furniture rather than a generic utility dashboard. Underneath that cabinet is a Rust/WASM pitch detector running off the main thread, so the visual character does not come at the cost of responsiveness.
 
 ## Stack
 
