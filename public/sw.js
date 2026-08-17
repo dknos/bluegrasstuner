@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bluegrass-tuner-v2';
+const CACHE_NAME = 'bluegrass-tuner-v3';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -16,6 +16,11 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url);
+  // Overtone is a separate static app. Never serve the tuner shell for it.
+  if (url.pathname === '/theory' || url.pathname.startsWith('/theory/')) {
+    return;
+  }
   event.respondWith(
     caches.match(event.request)
       .then((response) => {

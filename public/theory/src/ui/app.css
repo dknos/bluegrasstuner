@@ -1,0 +1,995 @@
+/* ==========================================================================
+   APP SHELL + VIEWS
+
+   The layout is borrowed from a DAW rather than a website: a fixed rail on
+   the left for where you are in the course, a stage in the middle, and a
+   transport bar pinned to the bottom that never goes away. In a studio the
+   transport is always within reach, and here it means audio controls are
+   never more than one glance away no matter what you are reading.
+   ========================================================================== */
+
+.app {
+  display: grid;
+  grid-template-columns: var(--rail-w) 1fr;
+  grid-template-rows: 1fr var(--transport-h);
+  grid-template-areas:
+    "rail stage"
+    "transport transport";
+  height: 100dvh;
+  overflow: hidden;
+}
+
+/* ---- Rail ---------------------------------------------------------------- */
+.rail {
+  grid-area: rail;
+  background: var(--deck);
+  border-right: 1px solid var(--rule);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+}
+
+.rail-brand {
+  padding: var(--s-5) var(--s-5) var(--s-4);
+  border-bottom: 1px solid var(--rule);
+}
+.rail-brand .mark {
+  font-family: var(--font-display);
+  font-size: var(--step-2);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text-hi);
+  line-height: 1;
+}
+.rail-brand .tag {
+  margin-top: var(--s-2);
+  font-family: var(--font-data);
+  font-size: var(--step--2);
+  color: var(--text-faint);
+  letter-spacing: 0.04em;
+}
+
+.rail-nav { padding: var(--s-4) var(--s-3); flex: 1; }
+.rail-group + .rail-group { margin-top: var(--s-5); }
+.rail-group > .label { padding: 0 var(--s-3) var(--s-2); display: block; }
+
+.rail-link {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  width: 100%;
+  padding: 0.5rem var(--s-3);
+  border: 0;
+  border-radius: var(--r-2);
+  background: transparent;
+  color: var(--text-dim);
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
+}
+.rail-link:hover { background: var(--riser); color: var(--text-hi); }
+.rail-link[aria-current="page"] { background: var(--riser); color: var(--text-hi); }
+.rail-link[aria-current="page"] .rail-idx { color: var(--void); background: var(--text-hi); }
+.rail-link[disabled] { opacity: 0.38; cursor: not-allowed; }
+
+/* Worlds are numbered by scale degree, not by 01/02/03 — the numbering itself
+   is a piece of music theory the learner is about to meet. */
+.rail-idx {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 22px; height: 22px;
+  border-radius: var(--r-1);
+  background: var(--riser-hi);
+  color: var(--text-faint);
+  font-family: var(--font-data);
+  font-size: var(--step--2);
+  transition: background var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
+}
+.rail-label { font-size: var(--step--1); }
+.rail-lock { margin-left: auto; font-size: var(--step--2); color: var(--text-faint); }
+
+/* ---- Stage --------------------------------------------------------------- */
+.stage {
+  grid-area: stage;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scroll-behavior: smooth;
+}
+.stage-inner {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: var(--s-7) var(--s-6) var(--s-9);
+}
+
+/* ---- Transport: always present, like hardware ---------------------------- */
+.transport {
+  grid-area: transport;
+  display: flex;
+  align-items: center;
+  gap: var(--s-4);
+  padding: 0 var(--s-5);
+  background: linear-gradient(to bottom, var(--riser), var(--deck));
+  border-top: 1px solid var(--rule-bright);
+  box-shadow: 0 -8px 24px rgb(0 0 0 / 0.35);
+  z-index: 20;
+}
+.transport-readout {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-3);
+  overflow: hidden;
+}
+.transport-readout .now {
+  font-family: var(--font-display);
+  font-size: var(--step-2);
+  font-weight: 700;
+  color: var(--text-hi);
+  white-space: nowrap;
+}
+.transport-readout .detail {
+  font-family: var(--font-data);
+  font-size: var(--step--1);
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.transport-controls { display: flex; align-items: center; gap: var(--s-2); }
+
+.slider {
+  -webkit-appearance: none; appearance: none;
+  width: 92px; height: 3px;
+  background: var(--rule-bright);
+  border-radius: var(--r-pill);
+  cursor: pointer;
+}
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 13px; height: 13px; border-radius: 50%;
+  background: var(--text-hi);
+  border: 0;
+  cursor: grab;
+}
+.slider::-moz-range-thumb {
+  width: 13px; height: 13px; border-radius: 50%;
+  background: var(--text-hi); border: 0; cursor: grab;
+}
+
+/* ==========================================================================
+   PIANO
+   ========================================================================== */
+.piano { width: 100%; }
+.piano:focus-visible { outline: 2px solid var(--text-hi); outline-offset: 4px; border-radius: var(--r-2); }
+
+.piano-key { cursor: pointer; }
+.piano-key-face {
+  transition: fill var(--t-fast) var(--ease), stroke var(--t-fast) var(--ease);
+}
+
+.piano-key.is-white .piano-key-face {
+  fill: #E8EBF2;
+  stroke: #0A0C11;
+  stroke-width: 0.75;
+}
+.piano-key.is-black .piano-key-face {
+  fill: #14171F;
+  stroke: #05060A;
+  stroke-width: 0.75;
+}
+.piano-key.is-white:hover .piano-key-face { fill: #FFFFFF; }
+.piano-key.is-black:hover .piano-key-face { fill: #232838; }
+
+/* A key that is part of the current musical object is lit from behind in its
+   interval colour. This is the same hue it will have on the staff, the
+   fretboard and the ring at the same moment. */
+.piano-key.is-on .piano-key-face {
+  fill: var(--hue);
+  stroke: color-mix(in srgb, var(--hue) 55%, #000);
+}
+.piano-key.is-on[data-iv="tonic"] .piano-key-face {
+  fill: var(--iv-tonic);
+  stroke: var(--text-faint);
+}
+.piano-key.is-focused .piano-key-face {
+  stroke: var(--text-hi);
+  stroke-width: 1.8;
+}
+
+.piano-key.is-ringing .piano-key-face {
+  filter: brightness(1.45) saturate(1.2);
+}
+
+.piano-key-label {
+  font-family: var(--font-data);
+  font-size: 7.2px;
+  fill: var(--void);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--t-fast) var(--ease);
+}
+.piano-key-label.is-visible { opacity: 0.82; }
+.piano-key.is-black .piano-key-label { fill: var(--text-hi); }
+.piano-key.is-black.is-on .piano-key-label { fill: var(--void); }
+
+/* ==========================================================================
+   THE FOUR-VIEW STACK
+   Each representation gets a labelled bay, like channels on a desk.
+   ========================================================================== */
+/* The whole point of four representations is seeing them move together, which
+   only works if they are on screen together. Stacked in one column you scroll
+   between the keyboard and the ring and the synchronisation is invisible.
+
+   auto-fit gives 1, 2 or 3 columns depending on the space available, and each
+   view is height-capped below so a square pitch ring cannot tower over a wide,
+   short keyboard and push everything else off the fold. */
+.views {
+  display: grid;
+  gap: var(--s-4);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
+  align-items: start;
+}
+
+/* Every view is an SVG at width:100% with height:auto, so capping max-height
+   clamps the box and preserveAspectRatio letterboxes the drawing inside it.
+   The picture stays centred and undistorted; it just stops being enormous. */
+.view-bay:last-child:nth-child(odd) { grid-column: 1 / -1; }
+
+.view-bay-body svg { max-height: 220px; }
+.view-bay[data-view="piano"] .view-bay-body svg { max-height: 165px; }
+.view-bay[data-view="staff"] .view-bay-body svg { max-height: 210px; }
+.view-bay[data-view="fretboard"] .view-bay-body svg { max-height: 195px; }
+/* The ring is the one square view. Left uncapped it is as tall as the column
+   is wide, which on a 500px column is 500px of one representation. */
+.view-bay[data-view="ring"] .view-bay-body svg { max-height: 290px; }
+
+/* A lone view has the whole width to itself and can afford to be bigger. */
+.views:has(.view-bay:only-child) .view-bay-body svg { max-height: 300px; }
+.views:has(.view-bay:only-child) .view-bay[data-view="piano"] .view-bay-body svg { max-height: 200px; }
+.view-bay {
+  background: var(--deck);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-4);
+  overflow: hidden;
+}
+.view-bay-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding: var(--s-3) var(--s-4);
+  border-bottom: 1px solid var(--rule);
+  background: var(--riser);
+}
+.view-bay-body { padding: var(--s-4); }
+.view-bay-body.is-tight { padding: var(--s-3); }
+
+/* ==========================================================================
+   READOUT — the interval answer, treated like an instrument display
+   ========================================================================== */
+.readout {
+  display: grid;
+  gap: var(--s-2);
+  padding: var(--s-5);
+  background:
+    radial-gradient(120% 100% at 50% 0%, color-mix(in srgb, var(--hue, var(--text-faint)) 14%, transparent), transparent 70%),
+    var(--deck);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-4);
+  text-align: center;
+}
+.readout-name {
+  font-family: var(--font-display);
+  font-size: var(--step-6);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--hue, var(--text-hi));
+  text-wrap: balance;
+}
+.readout-sub {
+  display: flex;
+  justify-content: center;
+  gap: var(--s-4);
+  flex-wrap: wrap;
+  font-family: var(--font-data);
+  font-size: var(--step--1);
+  color: var(--text-dim);
+}
+.readout-sub b { color: var(--text-hi); font-weight: 600; }
+
+/* ==========================================================================
+   HERO — the homepage demo is the real Interval Lab, not a picture of it
+   ========================================================================== */
+.hero { padding-block: var(--s-6) var(--s-7); }
+.hero-eyebrow { margin-bottom: var(--s-4); }
+.hero h1 {
+  font-family: var(--font-display);
+  font-size: clamp(2.6rem, 7vw, var(--step-7));
+  font-weight: 700;
+  line-height: 0.96;
+  letter-spacing: -0.025em;
+  color: var(--text-hi);
+  text-wrap: balance;
+}
+.hero h1 em {
+  font-style: normal;
+  color: var(--iv-major);
+}
+.hero-lede {
+  margin-top: var(--s-4);
+  max-width: 54ch;
+  font-size: var(--step-1);
+  color: var(--text-dim);
+}
+.hero-cta { margin-top: var(--s-5); display: flex; gap: var(--s-3); flex-wrap: wrap; }
+
+/* ==========================================================================
+   LESSON
+   ========================================================================== */
+.lesson-head { margin-bottom: var(--s-6); }
+.lesson-head h1 {
+  font-family: var(--font-display);
+  font-size: var(--step-5);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text-hi);
+  margin-top: var(--s-2);
+}
+
+/* The steps are named after what the learner does, and the name is the marker.
+   No 01/02/03 — the sequence is why→hear→see→discover→name→practice, and that
+   arc is the actual content. */
+.step { padding-block: var(--s-6); border-top: 1px solid var(--rule); }
+.step:first-child { border-top: 0; padding-top: 0; }
+.step-head { display: flex; align-items: baseline; gap: var(--s-3); margin-bottom: var(--s-4); }
+.step-kind {
+  font-family: var(--font-display);
+  font-size: var(--step--1);
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--iv-perfect);
+}
+.step h2 {
+  font-family: var(--font-display);
+  font-size: var(--step-3);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text-hi);
+}
+
+/* Explanation depth switch */
+.depth { display: inline-flex; padding: 2px; background: var(--riser); border: 1px solid var(--rule); border-radius: var(--r-2); }
+.depth button {
+  padding: 0.25rem 0.6rem;
+  border: 0; background: transparent; cursor: pointer;
+  border-radius: var(--r-1);
+  font-family: var(--font-display);
+  font-size: var(--step--2);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.depth button[aria-pressed="true"] { background: var(--riser-hi); color: var(--text-hi); }
+
+/* ==========================================================================
+   EXERCISE FEEDBACK — a wrong answer is a teaching moment, so it gets room
+   ========================================================================== */
+.choices { display: grid; gap: var(--s-3); grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.choice {
+  padding: var(--s-4);
+  background: var(--riser);
+  border: 1px solid var(--rule-bright);
+  border-radius: var(--r-3);
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease), transform var(--t-fast) var(--ease);
+}
+.choice:hover:not([disabled]) { background: var(--riser-hi); border-color: var(--text-faint); transform: translateY(-1px); }
+.choice .choice-main { font-family: var(--font-display); font-size: var(--step-1); font-weight: 600; color: var(--text-hi); }
+.choice .choice-sub { font-family: var(--font-data); font-size: var(--step--2); color: var(--text-faint); }
+.choice.is-correct { border-color: var(--ok); background: color-mix(in srgb, var(--ok) 14%, var(--riser)); }
+.choice.is-wrong { border-color: var(--no); background: color-mix(in srgb, var(--no) 14%, var(--riser)); }
+
+.verdict { border-radius: var(--r-4); border: 1px solid var(--rule); padding: var(--s-5); animation: fade-up var(--t-mid) var(--ease) 1; }
+.verdict.is-correct { border-color: var(--ok-dim); background: color-mix(in srgb, var(--ok) 7%, var(--deck)); }
+.verdict.is-wrong { border-color: var(--no-dim); background: color-mix(in srgb, var(--no) 7%, var(--deck)); }
+.verdict h3 { font-family: var(--font-display); font-size: var(--step-2); color: var(--text-hi); margin-bottom: var(--s-3); }
+
+/* The step-by-step reasoning after a wrong answer */
+.reasoning { display: grid; gap: var(--s-2); margin: var(--s-4) 0; }
+.reasoning li {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--s-3);
+  align-items: baseline;
+  padding: var(--s-2) 0;
+  border-bottom: 1px dashed var(--rule);
+  list-style: none;
+}
+.reasoning .r-key { font-family: var(--font-data); font-size: var(--step--2); color: var(--text-faint); letter-spacing: 0.08em; text-transform: uppercase; }
+.reasoning .r-val { color: var(--text); }
+.reasoning .r-val b { color: var(--text-hi); }
+
+/* Confidence buttons — a lucky guess must not count as recall */
+.confidence { display: flex; gap: var(--s-2); flex-wrap: wrap; }
+
+/* ==========================================================================
+   SCORE STRIP
+   ========================================================================== */
+.scorestrip { display: flex; gap: var(--s-5); align-items: center; flex-wrap: wrap; }
+.stat { display: grid; gap: 2px; }
+.stat .v { font-family: var(--font-display); font-size: var(--step-3); font-weight: 700; color: var(--text-hi); line-height: 1; }
+.stat .k { font-family: var(--font-display); font-size: var(--step--2); letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-faint); }
+
+/* Mastery is five separate numbers, never one percentage, because knowing what
+   a minor 7th looks like and hearing one are different skills. */
+.mastery { display: grid; gap: var(--s-2); }
+.mastery-row { display: grid; grid-template-columns: 96px 1fr auto; gap: var(--s-3); align-items: center; }
+.meter { height: 5px; background: var(--riser); border-radius: var(--r-pill); overflow: hidden; }
+.meter i { display: block; height: 100%; background: var(--hue, var(--iv-perfect)); border-radius: inherit; transition: width var(--t-slow) var(--ease); }
+
+/* ==========================================================================
+   RESPONSIVE — the rail collapses, the transport stays. Audio control is the
+   last thing that should ever be taken away.
+   ========================================================================== */
+@media (max-width: 900px) {
+  .app {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr var(--transport-h);
+    grid-template-areas: "rail" "stage" "transport";
+  }
+  .rail {
+    border-right: 0;
+    border-bottom: 1px solid var(--rule);
+    max-height: 30dvh;
+  }
+  .rail-nav { display: flex; gap: var(--s-2); overflow-x: auto; padding: var(--s-3); }
+  .rail-group { margin: 0 !important; display: flex; gap: var(--s-2); }
+  .rail-group > .label { display: none; }
+  .rail-link { width: auto; white-space: nowrap; }
+  .stage-inner { padding: var(--s-5) var(--s-4) var(--s-8); }
+}
+
+@media (max-width: 560px) {
+  .transport { gap: var(--s-2); padding: 0 var(--s-3); }
+  .transport-readout .detail { display: none; }
+  .readout-name { font-size: var(--step-5); }
+  .hero h1 { font-size: clamp(2.1rem, 10vw, 3rem); }
+}
+
+/* ==========================================================================
+   INTERVAL LAB
+   ========================================================================== */
+.lab-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: var(--s-3);
+}
+.lab-note {
+  display: grid;
+  gap: var(--s-2);
+  padding: var(--s-3) var(--s-4);
+  background: var(--deck);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-3);
+  cursor: pointer;
+  transition: border-color var(--t-fast) var(--ease), background var(--t-fast) var(--ease);
+}
+.lab-note:hover { background: var(--riser); }
+/* The note you are about to move is lit. Without this the keyboard clicks feel random. */
+.lab-note.is-editing { border-color: var(--text-faint); background: var(--riser); }
+.lab-note.is-editing .label-sm { color: var(--text-hi); }
+
+.lab-note-controls { display: flex; align-items: center; justify-content: space-between; gap: var(--s-2); }
+.lab-note-controls .btn { width: 34px; padding: 0.35rem 0; font-size: var(--step-1); line-height: 1; }
+.lab-note-name {
+  flex: 1;
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: var(--step-3);
+  font-weight: 700;
+  color: var(--text-hi);
+}
+
+.readout-note {
+  margin-top: var(--s-2);
+  color: var(--text-dim);
+  font-size: var(--step--1);
+  max-width: 52ch;
+  margin-inline: auto;
+  text-wrap: pretty;
+}
+
+.segmented { display: inline-flex; padding: 2px; background: var(--riser); border: 1px solid var(--rule-bright); border-radius: var(--r-2); }
+.segmented button {
+  padding: 0.4rem 0.8rem;
+  border: 0; background: transparent; cursor: pointer;
+  border-radius: var(--r-1);
+  font-family: var(--font-display);
+  font-size: var(--step--1);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  transition: background var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
+}
+.segmented button[aria-pressed="true"] { background: var(--riser-hi); color: var(--text-hi); }
+.segmented button:hover { color: var(--text-hi); }
+
+.lab-controls { gap: var(--s-3); }
+
+/* Loading placeholder for a view that has not arrived yet */
+.view-bay-body[aria-busy="true"] {
+  min-height: 84px;
+  background:
+    repeating-linear-gradient(90deg, var(--rule) 0 1px, transparent 1px 28px);
+  opacity: 0.35;
+}
+
+/* ==========================================================================
+   HOME
+   ========================================================================== */
+.skip {
+  position: absolute; left: var(--s-3); top: -3rem; z-index: 100;
+  padding: var(--s-2) var(--s-4);
+  background: var(--text-hi); color: var(--void);
+  border-radius: var(--r-2);
+  transition: top var(--t-fast) var(--ease);
+}
+.skip:focus { top: var(--s-3); }
+
+.demo { margin-block: var(--s-6); }
+.demo-strip {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: var(--s-3); flex-wrap: wrap;
+  padding-bottom: var(--s-3);
+  margin-bottom: var(--s-4);
+  border-bottom: 1px solid var(--rule);
+}
+/* The one live element on the page gets a quiet pulse so the eye finds it. */
+.demo-strip .label { color: var(--iv-major); }
+.demo-strip .label::before {
+  content: ""; display: inline-block;
+  width: 6px; height: 6px; margin-right: 0.5em;
+  border-radius: 50%; background: currentColor;
+  animation: beacon 2.4s var(--ease) infinite;
+}
+@keyframes beacon { 0%,100% { opacity: 1 } 50% { opacity: 0.25 } }
+
+.pitch { margin-block: var(--s-8); }
+.pitch-grid {
+  display: grid; gap: var(--s-5);
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  margin-top: var(--s-5);
+}
+.pitch-grid h3 {
+  font-family: var(--font-display);
+  font-size: var(--step-1);
+  font-weight: 600;
+  color: var(--text-hi);
+  margin-bottom: var(--s-2);
+  padding-top: var(--s-3);
+  border-top: 2px solid var(--rule-bright);
+}
+.pitch-grid p { color: var(--text-dim); font-size: var(--step--1); text-wrap: pretty; }
+
+.colourkey { padding: var(--s-5); margin-block: var(--s-7); }
+.colourkey-head p { margin-top: var(--s-2); color: var(--text-dim); max-width: 60ch; font-size: var(--step--1); }
+.colourkey-list {
+  display: grid; gap: var(--s-3);
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  margin-top: var(--s-5);
+  list-style: none; padding: 0;
+}
+.colourkey-list li { display: grid; grid-template-columns: auto 1fr; gap: var(--s-2) var(--s-3); align-items: center; }
+.colourkey-list i {
+  grid-row: span 2;
+  width: 12px; height: 34px; border-radius: var(--r-1);
+  background: var(--hue);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--hue) 45%, transparent);
+}
+.colourkey-list b { color: var(--text-hi); font-family: var(--font-display); letter-spacing: 0.02em; }
+.colourkey-list span { grid-column: 2; font-size: var(--step--2); color: var(--text-faint); }
+
+.resume {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: var(--s-4); flex-wrap: wrap;
+  padding: var(--s-4) var(--s-5);
+  margin-bottom: var(--s-6);
+}
+.resume p { color: var(--text-dim); margin-top: 2px; }
+
+.rail-foot { padding: var(--s-3); border-top: 1px solid var(--rule); }
+
+.t-field { display: flex; align-items: center; gap: var(--s-2); }
+.t-field .label-sm { display: none; }
+@media (min-width: 1100px) { .t-field .label-sm { display: inline; } }
+@media (max-width: 700px) { .t-field { display: none; } }
+
+/* ==========================================================================
+   COURSE / WORLDS
+   ========================================================================== */
+.worlds { display: grid; gap: var(--s-7); }
+.world.is-stub { opacity: 0.62; }
+.world-head { display: grid; grid-template-columns: auto 1fr auto; gap: var(--s-4); align-items: center; padding-bottom: var(--s-4); border-bottom: 1px solid var(--rule); }
+.world-idx { font-size: var(--step-4); color: var(--text-faint); line-height: 1; }
+.world-title h2 { font-family: var(--font-display); font-size: var(--step-3); font-weight: 700; color: var(--text-hi); letter-spacing: -0.01em; }
+.world-title p { color: var(--text-dim); font-size: var(--step--1); }
+.world-progress { display: grid; gap: var(--s-2); justify-items: end; }
+.world-stub-note { margin-top: var(--s-4); color: var(--text-faint); font-size: var(--step--1); max-width: 60ch; }
+
+.lesson-list { list-style: none; padding: 0; margin-top: var(--s-4); display: grid; gap: var(--s-2); }
+.lesson-card {
+  display: grid; grid-template-columns: auto 1fr auto; gap: var(--s-4);
+  align-items: center; width: 100%; text-align: left;
+  padding: var(--s-3) var(--s-4);
+  background: var(--deck); border: 1px solid var(--rule); border-radius: var(--r-3);
+  cursor: pointer;
+  transition: border-color var(--t-fast) var(--ease), background var(--t-fast) var(--ease), transform var(--t-fast) var(--ease);
+}
+.lesson-card:hover:not([disabled]) { background: var(--riser); border-color: var(--rule-bright); transform: translateX(2px); }
+.lesson-card[disabled] { opacity: 0.42; cursor: not-allowed; }
+.lesson-card.is-done { border-left: 2px solid var(--ok); }
+.lesson-card-idx { color: var(--text-faint); font-size: var(--step--1); }
+.lesson-card-body { display: grid; gap: 2px; min-width: 0; }
+.lesson-card-title { font-family: var(--font-display); font-size: var(--step-1); font-weight: 600; color: var(--text-hi); }
+.lesson-card-sub { color: var(--text-dim); font-size: var(--step--1); }
+.lesson-card-block { color: var(--warn); font-size: var(--step--2); font-family: var(--font-data); }
+.lesson-card-meta { display: flex; align-items: center; gap: var(--s-3); color: var(--text-faint); font-size: var(--step--2); }
+.tick { color: var(--ok); }
+
+/* ==========================================================================
+   LESSON ARC
+   ========================================================================== */
+.lesson-depth { margin-top: var(--s-4); color: var(--text); font-size: var(--step-1); max-width: 64ch; text-wrap: pretty; }
+.step.is-locked { opacity: 0.4; }
+.step-body { margin-bottom: var(--s-4); }
+.step-locked-note { color: var(--text-faint); font-size: var(--step--1); font-style: italic; }
+.step-more { margin-top: var(--s-5); }
+.hear-block { display: flex; align-items: center; gap: var(--s-4); flex-wrap: wrap; }
+.btn-big { padding: 0.9rem 1.6rem; font-size: var(--step-0); }
+.hear-label { color: var(--text-dim); }
+
+.lesson-foot {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: var(--s-4); flex-wrap: wrap;
+  padding: var(--s-5); margin-top: var(--s-7);
+}
+.lesson-foot p { color: var(--text-dim); font-size: var(--step--1); margin-top: 2px; }
+
+/* ==========================================================================
+   WIDGET
+   ========================================================================== */
+.widget { display: grid; gap: var(--s-4); }
+.widget-readout {
+  padding: var(--s-4) var(--s-5);
+  background: radial-gradient(120% 100% at 50% 0%, color-mix(in srgb, var(--hue, var(--text-faint)) 12%, transparent), transparent 70%), var(--deck);
+  border: 1px solid var(--rule); border-radius: var(--r-4); text-align: center;
+}
+.widget-controls { gap: var(--s-3); }
+.widget-field { display: grid; gap: 4px; }
+.widget-field select, .field select {
+  padding: 0.45rem 0.6rem; background: var(--riser); color: var(--text-hi);
+  border: 1px solid var(--rule-bright); border-radius: var(--r-2);
+}
+
+/* The two-number readout — the crux of the interval world made visual */
+.two-number { display: flex; align-items: center; justify-content: center; gap: var(--s-4); flex-wrap: wrap; }
+.tn-cell { display: grid; gap: 2px; justify-items: center; min-width: 96px; }
+.tn-v { font-family: var(--font-display); font-size: var(--step-5); font-weight: 700; color: var(--text-hi); line-height: 1; }
+.tn-hint { font-size: var(--step--2); color: var(--text-faint); max-width: 16ch; text-align: center; }
+.tn-op { font-family: var(--font-display); font-size: var(--step-3); color: var(--text-faint); }
+.tn-answer .tn-name { font-family: var(--font-display); font-size: var(--step-3); font-weight: 700; color: var(--hue, var(--text-hi)); }
+
+.degree-strip { display: flex; gap: var(--s-2); flex-wrap: wrap; justify-content: center; }
+.degree-cell { display: grid; gap: 2px; justify-items: center; padding: var(--s-2) var(--s-3); background: var(--riser); border: 1px solid var(--rule); border-radius: var(--r-2); min-width: 54px; }
+.degree-cell b { font-family: var(--font-data); font-size: var(--step--1); color: var(--hue, var(--text-dim)); }
+.degree-cell i { font-style: normal; font-family: var(--font-display); font-size: var(--step-1); color: var(--text-hi); }
+.step-strip { margin-top: var(--s-3); text-align: center; color: var(--text-faint); letter-spacing: 0.3em; }
+
+.letter-strip { display: flex; gap: var(--s-2); align-items: center; justify-content: center; flex-wrap: wrap; }
+.letter-cell { display: grid; place-items: center; width: 40px; height: 40px; border-radius: var(--r-2); background: var(--riser); border: 1px solid var(--rule-bright); font-family: var(--font-display); font-size: var(--step-2); font-weight: 700; color: var(--text-hi); }
+.letter-arrow { color: var(--text-faint); }
+
+/* ==========================================================================
+   GAMES
+   ========================================================================== */
+.game-grid { display: grid; gap: var(--s-4); grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); }
+.game-card {
+  display: grid; gap: var(--s-2); text-align: left; padding: var(--s-5);
+  background: var(--deck); border: 1px solid var(--rule); border-radius: var(--r-4); cursor: pointer;
+  transition: border-color var(--t-fast) var(--ease), transform var(--t-fast) var(--ease), background var(--t-fast) var(--ease);
+}
+.game-card:hover { background: var(--riser); border-color: var(--rule-bright); transform: translateY(-2px); }
+.game-card-title { font-family: var(--font-display); font-size: var(--step-2); font-weight: 700; color: var(--text-hi); }
+.game-card-blurb { color: var(--text-dim); font-size: var(--step--1); }
+.game-card-meta { color: var(--text-faint); }
+
+.game-head { display: flex; justify-content: space-between; gap: var(--s-5); flex-wrap: wrap; margin-bottom: var(--s-5); }
+.game-blurb { color: var(--text-dim); margin-top: var(--s-2); max-width: 50ch; }
+.game-body { padding: var(--s-5); display: grid; gap: var(--s-5); }
+.game-question { font-family: var(--font-display); font-size: var(--step-2); color: var(--text-hi); text-align: center; }
+.game-foot { display: flex; align-items: center; gap: var(--s-3); margin-top: var(--s-4); }
+.game-timer { margin-left: auto; color: var(--text-faint); }
+.game-timer.is-low { color: var(--no); }
+.compare { margin-top: var(--s-4); padding-top: var(--s-4); border-top: 1px dashed var(--rule); }
+.confidence-block { margin-top: var(--s-4); padding-top: var(--s-4); border-top: 1px dashed var(--rule); }
+
+/* ==========================================================================
+   LAB TOOLS
+   ========================================================================== */
+.lab-bar { margin-bottom: var(--s-5); gap: var(--s-4); }
+.role-table { width: 100%; margin-top: var(--s-4); border-collapse: collapse; font-size: var(--step--1); }
+.role-table th { text-align: left; font-family: var(--font-display); font-size: var(--step--2); letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-faint); padding-bottom: var(--s-2); border-bottom: 1px solid var(--rule); font-weight: 600; }
+.role-table td { padding: var(--s-2) var(--s-3) var(--s-2) 0; border-bottom: 1px solid var(--rule); color: var(--text); }
+.role-table td:first-child { color: var(--text-hi); }
+.role-note { color: var(--text-faint); }
+
+.harmony-table { display: grid; gap: var(--s-2); grid-template-columns: repeat(auto-fit, minmax(108px, 1fr)); margin-top: var(--s-4); }
+.harmony-cell {
+  display: grid; gap: 2px; justify-items: center; padding: var(--s-3);
+  background: var(--riser); border: 1px solid var(--rule-bright); border-radius: var(--r-3); cursor: pointer;
+  transition: transform var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease);
+}
+.harmony-cell:hover { transform: translateY(-2px); }
+/* Function is encoded in the border, so the three roles are visible at a glance */
+.harmony-cell[data-fn="tonic"] { border-bottom: 2px solid var(--iv-perfect); }
+.harmony-cell[data-fn="predominant"] { border-bottom: 2px solid var(--iv-major); }
+.harmony-cell[data-fn="dominant"] { border-bottom: 2px solid var(--iv-tritone); }
+.hc-roman { font-family: var(--font-display); font-size: var(--step-2); font-weight: 700; color: var(--text-hi); }
+.hc-sym { font-family: var(--font-data); font-size: var(--step--1); color: var(--text-dim); }
+.hc-fn { color: var(--text-faint); }
+
+/* ==========================================================================
+   MAP
+   ========================================================================== */
+.map-legend { margin-bottom: var(--s-5); gap: var(--s-3); }
+.map { display: grid; gap: var(--s-6); }
+.map-layer-rule { display: flex; align-items: center; gap: var(--s-3); margin-bottom: var(--s-3); }
+.map-layer-rule::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
+.map-nodes { display: grid; gap: var(--s-3); grid-template-columns: repeat(auto-fill, minmax(196px, 1fr)); }
+.map-node {
+  display: grid; gap: var(--s-2); text-align: left; padding: var(--s-3) var(--s-4);
+  background: var(--deck); border: 1px solid var(--rule); border-left: 3px solid var(--hue, var(--rule));
+  border-radius: var(--r-2); cursor: pointer;
+  transition: background var(--t-fast) var(--ease), transform var(--t-fast) var(--ease);
+}
+.map-node:hover:not([disabled]) { background: var(--riser); transform: translateY(-1px); }
+.map-node[disabled] { cursor: default; }
+.map-node.is-stub { opacity: 0.45; }
+.map-node-title { font-family: var(--font-display); font-size: var(--step-0); font-weight: 600; color: var(--text-hi); }
+.map-node-req { color: var(--text-faint); text-transform: none; letter-spacing: 0; }
+.map-node-meter { width: 100%; }
+
+/* ==========================================================================
+   PRACTICE
+   ========================================================================== */
+.session { list-style: none; padding: 0; display: grid; gap: var(--s-3); }
+.session-block {
+  display: grid; grid-template-columns: auto 1fr auto; gap: var(--s-4); align-items: center;
+  padding: var(--s-4); background: var(--deck); border: 1px solid var(--rule); border-radius: var(--r-3);
+}
+.session-time { font-family: var(--font-display); font-size: var(--step-3); font-weight: 700; color: var(--text-hi); line-height: 1; display: grid; justify-items: center; }
+.session-time span { font-size: var(--step--2); color: var(--text-faint); letter-spacing: 0.1em; }
+.session-body h3 { font-family: var(--font-display); font-size: var(--step-1); font-weight: 600; color: var(--text-hi); margin-top: 2px; }
+.session-body p { color: var(--text-dim); font-size: var(--step--1); }
+.due-list { list-style: none; padding: 0; margin-top: var(--s-3); display: grid; gap: var(--s-2); }
+.due-list li { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); font-size: var(--step--1); color: var(--text); }
+
+/* ==========================================================================
+   SETTINGS
+   ========================================================================== */
+.settings-block { padding: var(--s-5); margin-bottom: var(--s-4); }
+.settings-grid { display: grid; gap: var(--s-4); grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); margin-top: var(--s-4); }
+.field { display: grid; gap: 4px; }
+.settings-note { margin-top: var(--s-4); color: var(--text-faint); font-size: var(--step--2); max-width: 66ch; }
+.mastery-table { display: grid; gap: var(--s-4); margin-top: var(--s-4); }
+.mastery-concept { padding: var(--s-3) var(--s-4); background: var(--riser); border-radius: var(--r-3); }
+.mastery-name { font-family: var(--font-display); font-weight: 600; color: var(--text-hi); margin-bottom: var(--s-2); }
+
+/* On a phone the rail is a single scrolling strip, not a stacked menu —
+   vertical space belongs to the instrument, not to navigation. */
+@media (max-width: 900px) {
+  .rail { max-height: none; }
+  .rail-brand { padding: var(--s-3) var(--s-4); display: flex; align-items: baseline; gap: var(--s-3); }
+  .rail-brand .mark { font-size: var(--step-1); }
+  .rail-brand .tag { margin: 0; }
+  .rail-nav { padding: var(--s-2) var(--s-3); }
+  .rail-foot { border-top: 0; padding: 0 var(--s-3) var(--s-2); }
+  .rail-idx { display: none; }
+  .rail-link { padding: 0.35rem var(--s-3); border: 1px solid var(--rule); }
+}
+
+/* ---- Lesson step furniture ---------------------------------------------- */
+.lesson-sub { margin-top: var(--s-2); color: var(--text-dim); font-size: var(--step-0); max-width: 60ch; }
+.widget-prompt { margin-bottom: var(--s-4); color: var(--text); max-width: 62ch; text-wrap: pretty; }
+.apply-task {
+  margin: var(--s-4) 0; padding: var(--s-3) var(--s-4);
+  border-left: 2px solid var(--iv-perfect); background: var(--riser);
+  border-radius: 0 var(--r-2) var(--r-2) 0; color: var(--text); max-width: 62ch;
+}
+.name-chips { margin-bottom: var(--s-3); gap: var(--s-2); }
+/* "What should I notice" stays hidden until they have actually had a go —
+   read first and it becomes an instruction instead of a discovery. */
+.noticing { margin-top: var(--s-4); }
+.noticing-text {
+  padding: var(--s-3) var(--s-4); background: color-mix(in srgb, var(--iv-perfect) 8%, var(--deck));
+  border: 1px solid var(--iv-perfect-dim); border-radius: var(--r-3);
+  color: var(--text); max-width: 62ch; animation: fade-up var(--t-mid) var(--ease) 1;
+}
+.takeaways { list-style: none; padding: 0; display: grid; gap: var(--s-2); margin-bottom: var(--s-4); }
+.takeaways li {
+  display: grid; grid-template-columns: auto 1fr; gap: var(--s-3); align-items: baseline;
+  color: var(--text); max-width: 62ch;
+}
+.takeaways li::before { content: "—"; color: var(--iv-major); }
+.next-up { color: var(--text-dim); font-size: var(--step--1); }
+.next-up .label-sm { margin-right: var(--s-2); }
+
+/* ==========================================================================
+   WATCH
+   ========================================================================== */
+.film-grid { display: grid; gap: var(--s-4); grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+.film-card {
+  display: grid; grid-template-columns: auto 1fr; gap: var(--s-4);
+  text-align: left; padding: var(--s-5);
+  background: var(--deck); border: 1px solid var(--rule); border-radius: var(--r-4);
+  cursor: pointer;
+  transition: border-color var(--t-fast) var(--ease), transform var(--t-fast) var(--ease), background var(--t-fast) var(--ease);
+}
+.film-card:hover { background: var(--riser); border-color: var(--rule-bright); transform: translateY(-2px); }
+.film-card-play {
+  display: grid; place-items: center;
+  width: 52px; height: 52px; border-radius: 50%;
+  background: color-mix(in srgb, var(--iv-major) 18%, transparent);
+  border: 1px solid var(--iv-major); color: var(--iv-major);
+}
+.film-card-body { display: grid; gap: var(--s-2); }
+.film-card-title { font-family: var(--font-display); font-size: var(--step-1); font-weight: 700; color: var(--text-hi); }
+.film-card-blurb { color: var(--text-dim); font-size: var(--step--1); }
+.film-card-meta { color: var(--text-faint); }
+
+.film-player { padding: var(--s-3); overflow: hidden; }
+.film-player video { width: 100%; height: auto; display: block; border-radius: var(--r-3); background: #000; }
+
+.film-after {
+  display: grid; gap: var(--s-6);
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  margin-top: var(--s-6);
+}
+
+/* ==========================================================================
+   FITTING THE WHOLE INSTRUMENT ON ONE SCREEN
+
+   Four synchronised representations only teach anything if you can see them
+   change together. Measured at 1440x900 the lab needed 1299px of a 832px
+   stage, so the keyboard and the pitch ring were never on screen at once and
+   the synchronisation, which is the entire point, was invisible.
+
+   Everything below buys vertical space back: smaller readout type in lab
+   context, the note picker and transport on one row, and per-view height
+   caps tuned so two rows of bays fit under the readout.
+   ========================================================================== */
+.lab-interval .readout { padding: var(--s-3) var(--s-4); gap: var(--s-1); }
+.lab-interval .readout-name { font-size: var(--step-4); }
+.lab-interval .readout-sub { gap: var(--s-3); font-size: var(--step--2); }
+.lab-interval .readout-note { display: none; }   /* the views say it better */
+
+/* Picker and transport share a row instead of stacking. */
+.lab-interval { --flow: var(--s-3) !important; }
+.lab-picker { grid-template-columns: repeat(2, minmax(150px, 220px)); }
+.lab-note { padding: var(--s-2) var(--s-3); gap: var(--s-1); }
+.lab-note-name { font-size: var(--step-1); }
+.lab-note-controls .btn { width: 30px; padding: 0.2rem 0; }
+
+@media (min-width: 1100px) {
+  /* Picker on the left, transport on the right, one row. */
+  .lab-interval .lab-picker {
+    grid-template-columns: repeat(2, minmax(150px, 200px)) 1fr;
+  }
+  .lab-interval .lab-controls {
+    grid-column: 3;
+    margin-top: 0;
+    justify-content: flex-end;
+    align-self: center;
+  }
+  .lab-interval .lab-picker + .lab-controls { margin-top: calc(-1 * var(--s-3)); }
+}
+
+/* Tighter bays: the chrome around each view was costing 80px per bay. */
+.view-bay-head { padding: var(--s-2) var(--s-3); }
+.view-bay-body { padding: var(--s-3); }
+
+/* Height caps tuned so two rows of bays fit under the readout at 900px tall.
+   The ring gets the most room because it is the only square one and the only
+   one whose labels become unreadable when squashed. */
+.view-bay-body svg { max-height: 175px; }
+.view-bay[data-view="piano"] .view-bay-body svg { max-height: 120px; }
+.view-bay[data-view="staff"] .view-bay-body svg { max-height: 140px; }
+.view-bay[data-view="fretboard"] .view-bay-body svg { max-height: 135px; }
+.view-bay[data-view="ring"] .view-bay-body svg { max-height: 215px; }
+
+/* A tall viewport can afford more, so give it back. */
+@media (min-height: 1000px) {
+  .view-bay[data-view="piano"] .view-bay-body svg { max-height: 160px; }
+  .view-bay[data-view="staff"] .view-bay-body svg { max-height: 185px; }
+  .view-bay[data-view="fretboard"] .view-bay-body svg { max-height: 175px; }
+  .view-bay[data-view="ring"] .view-bay-body svg { max-height: 232px; }
+}
+
+/* Phones scroll anyway, so stop fighting for pixels and make it readable. */
+@media (max-width: 700px) {
+  .view-bay-body svg,
+  .view-bay[data-view="piano"] .view-bay-body svg,
+  .view-bay[data-view="staff"] .view-bay-body svg,
+  .view-bay[data-view="fretboard"] .view-bay-body svg,
+  .view-bay[data-view="ring"] .view-bay-body svg { max-height: none; }
+  .lab-interval .readout-note { display: block; }
+}
+
+/* Picker and transport on one line. On a narrow screen they wrap naturally. */
+.lab-bar-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s-4);
+  flex-wrap: wrap;
+}
+.lab-bar-row .lab-picker { flex: 0 1 auto; margin: 0; }
+.lab-bar-row .lab-controls { flex: 1 1 auto; justify-content: flex-end; margin: 0; }
+
+/* A short viewport gets shorter views rather than a scrollbar between the
+   keyboard and the ring. 1280x800 and 1440x900 are the common laptop sizes
+   and both have to fit. */
+@media (max-height: 950px) {
+  .view-bay-body svg { max-height: 165px; }
+  .view-bay[data-view="piano"] .view-bay-body svg { max-height: 118px; }
+  .view-bay[data-view="staff"] .view-bay-body svg { max-height: 140px; }
+  .view-bay[data-view="fretboard"] .view-bay-body svg { max-height: 132px; }
+  .view-bay[data-view="ring"] .view-bay-body svg { max-height: 178px; }
+  .stage-inner { padding-top: var(--s-5); padding-bottom: var(--s-6); }
+  .lab-interval .readout-name { font-size: var(--step-3); }
+}
+@media (max-height: 820px) {
+  .view-bay[data-view="piano"] .view-bay-body svg { max-height: 100px; }
+  .view-bay[data-view="staff"] .view-bay-body svg { max-height: 124px; }
+  .view-bay[data-view="fretboard"] .view-bay-body svg { max-height: 110px; }
+  .view-bay[data-view="ring"] .view-bay-body svg { max-height: 152px; }
+  .view-bay-head { padding: 4px var(--s-3); }
+  .view-bay-head .label-sm { display: none; }   /* the hint is a nicety */
+  .view-bay-body { padding: var(--s-2); }
+  .lab-interval .readout { padding: var(--s-2) var(--s-3); }
+  .lab-interval .readout-name { font-size: var(--step-2); }
+  .stage-inner { padding-top: var(--s-4); }
+}
+
+/* In a lab the title is orientation, not the point. The instrument is. */
+@media (max-height: 950px) {
+  .lab-interval ~ * .lesson-head,
+  .stage-inner > .lesson-head { margin-bottom: var(--s-3); }
+  .stage-inner > .lesson-head h1 { font-size: var(--step-3); }
+  .stage-inner > .btn-ghost { margin-bottom: var(--s-3) !important; }
+}
+
+/* Notation renders at a fixed natural size and is left-aligned by its own
+   preserveAspectRatio, which leaves it stranded at one end of a wide bay.
+   Centre it so the bay reads as composed rather than half-empty. */
+.view-bay[data-view="staff"] .view-bay-body svg,
+.view-bay[data-view="ring"] .view-bay-body svg { margin-inline: auto; }
+.view-bay-body { display: grid; align-content: center; }
+
+.rail-back {
+  display: inline-block;
+  margin-top: var(--s-3);
+  font-family: var(--font-data);
+  font-size: var(--step--2);
+  color: var(--text-faint);
+  text-decoration: none;
+  letter-spacing: 0.03em;
+}
+.rail-back:hover { color: var(--text-hi); }

@@ -415,6 +415,8 @@ const App: React.FC = () => {
           >
               {activeDropdown.type === 'charts' && (
                   <>
+                      <DropdownLink href="/theory/" label="Theory Course" />
+                      <div className="h-px bg-gray-800 my-1"></div>
                       <DropdownItem onClick={() => openModal(setShowNumbersGame)} label="Nashville Numbers" />
                       <DropdownItem onClick={() => openModal(setShowCagedGame)} label="CAGED System" />
                       <DropdownItem onClick={() => openModal(setShowCircleGame)} label="Circle of 5ths" />
@@ -424,6 +426,7 @@ const App: React.FC = () => {
                   <>
                       <DropdownItem onClick={() => openModal(setShowSynthsHub)} label="Synths Hub (9 Engines)" />
                       <div className="h-px bg-gray-800 my-1"></div>
+                      <DropdownLink href="/theory/" label="Theory Course" />
                       <DropdownItem onClick={() => openModal(setShowDrumMachine)} label="Drum Machine + Keys" />
                       <DropdownItem onClick={() => openModal(setShowChordGame)} label="Chord Quiz" />
                       <DropdownItem onClick={() => openModal(setShowTempoGame)} label="Guess the Tempo" />
@@ -464,13 +467,25 @@ const FloatingDropdown: React.FC<{ rect: DOMRect; onClose: () => void; children:
     );
 }
 
+const dropdownItemClass = "w-full text-left px-4 py-3 text-sm font-bold text-gray-300 hover:text-white hover:bg-gray-800 transition-colors border-b border-gray-800 last:border-0";
+
 const DropdownItem: React.FC<{ onClick: () => void; label: string }> = ({ onClick, label }) => (
     <button 
         onClick={(e) => { e.stopPropagation(); onClick(); }}
-        className="w-full text-left px-4 py-3 text-sm font-bold text-gray-300 hover:text-white hover:bg-gray-800 transition-colors border-b border-gray-800 last:border-0"
+        className={dropdownItemClass}
     >
         {label}
     </button>
+);
+
+const DropdownLink: React.FC<{ href: string; label: string }> = ({ href, label }) => (
+    <a
+        href={href}
+        className={`${dropdownItemClass} block`}
+        onClick={(e) => e.stopPropagation()}
+    >
+        {label}
+    </a>
 );
 
 export default App;

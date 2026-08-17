@@ -62,6 +62,12 @@ npm run preview  # serve the production build locally
 
 Microphone access is required for tuning; grant it when prompted.
 
+## Overtone (theory course)
+
+The interactive theory course lives at **[/theory/](https://bluegrasstuner.com/theory/)**
+and is linked from Charts and Tools. It is a static ES-module app vendored into
+`public/theory/` (no videos — the Watch page is a YouTube placeholder).
+
 ## Deploy — Cloudflare Pages
 
 Connect this repo in the Cloudflare dashboard (Workers & Pages → Create → Pages →

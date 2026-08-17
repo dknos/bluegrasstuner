@@ -1,0 +1,359 @@
+/* ==========================================================================
+   DESIGN TOKENS
+
+   The look is borrowed from two places the subject actually lives in: the
+   analog studio (dark glass, illuminated controls, a transport bar that never
+   leaves the screen) and the scientific instrument (condensed technical
+   lettering, precise hairlines, readings you can trust).
+
+   THE ONE BIG IDEA — colour means something here.
+   Every pitch is tinted by its interval relationship to the current tonic:
+
+       perfect intervals   teal      stable, structural
+       major intervals     gold      bright, open
+       minor intervals     violet    shadowed
+       the tritone         magenta   unstable, wants to move
+       the tonic itself    white     the thing everything is measured against
+
+   The same note is the same colour on the piano, the staff, the fretboard and
+   the pitch ring at the same instant. That is the four-representation idea
+   made visible, and it is the thing the product should be remembered by. It
+   is not decoration, so nothing else in the interface is allowed to use these
+   five hues.
+   ========================================================================== */
+
+:root {
+  /* ---- Surfaces: dark glass, lit from within ---------------------------- */
+  --void:        #07080B;   /* page */
+  --deck:        #0E1118;   /* panel */
+  --riser:       #161A24;   /* raised control */
+  --riser-hi:    #1E2431;   /* hover */
+  --rule:        #232937;   /* hairline */
+  --rule-bright: #333B4D;
+
+  /* ---- Text ------------------------------------------------------------- */
+  --text-hi:  #EFF2F7;
+  --text:     #B9C1D0;
+  --text-dim: #7C8698;
+  --text-faint: #4E5768;
+
+  /* ---- The interval palette. Load-bearing. ------------------------------ */
+  --iv-perfect:  #3FD0C9;
+  --iv-major:    #F5B942;
+  --iv-minor:    #9B8CFF;
+  --iv-tritone:  #FF5D8F;
+  --iv-tonic:    #FFFFFF;
+
+  --iv-perfect-dim: #1C5C59;
+  --iv-major-dim:   #6B5119;
+  --iv-minor-dim:   #443E70;
+  --iv-tritone-dim: #6E2A41;
+  --iv-tonic-dim:   #5A6070;
+
+  /* ---- Feedback. Deliberately outside the interval hues. ---------------- */
+  --ok:    #5BE49B;
+  --ok-dim:#1E5C43;
+  --no:    #FF7A6B;
+  --no-dim:#6B2C28;
+  --warn:  #FFC861;
+
+  /* ---- Type ------------------------------------------------------------- */
+  /* A condensed grotesque for anything that labels or measures — it reads
+     like control-panel silkscreen. Used with restraint: never for prose. */
+  --font-display: "Bahnschrift", "DIN Alternate", "DIN Condensed",
+                  "Oswald", "Archivo Narrow", "Roboto Condensed",
+                  "Helvetica Neue Condensed", ui-sans-serif, sans-serif;
+  --font-body: ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+               Roboto, "Helvetica Neue", Arial, sans-serif;
+  /* Formulas, semitone counts, interval symbols — anything you read as data. */
+  --font-data: "Cascadia Mono", "Cascadia Code", ui-monospace, "SF Mono",
+               Menlo, Consolas, "Liberation Mono", monospace;
+
+  --step--2: 0.694rem;
+  --step--1: 0.833rem;
+  --step-0:  1rem;
+  --step-1:  1.2rem;
+  --step-2:  1.44rem;
+  --step-3:  1.728rem;
+  --step-4:  2.074rem;
+  --step-5:  2.488rem;
+  --step-6:  3.583rem;
+  --step-7:  5.16rem;
+
+  /* ---- Space ------------------------------------------------------------ */
+  --s-1: 0.25rem;
+  --s-2: 0.5rem;
+  --s-3: 0.75rem;
+  --s-4: 1rem;
+  --s-5: 1.5rem;
+  --s-6: 2rem;
+  --s-7: 3rem;
+  --s-8: 4rem;
+  --s-9: 6rem;
+
+  /* ---- Geometry: small radii. This is equipment, not a greeting card. --- */
+  --r-1: 2px;
+  --r-2: 4px;
+  --r-3: 6px;
+  --r-4: 10px;
+  --r-pill: 999px;
+
+  --rail-w: 232px;
+  --transport-h: 68px;
+  --measure: 62ch;
+
+  /* ---- Depth ------------------------------------------------------------ */
+  --lift-1: 0 1px 0 rgb(255 255 255 / 0.04) inset, 0 1px 2px rgb(0 0 0 / 0.5);
+  --lift-2: 0 1px 0 rgb(255 255 255 / 0.05) inset, 0 4px 16px rgb(0 0 0 / 0.55);
+  --lift-3: 0 1px 0 rgb(255 255 255 / 0.06) inset, 0 12px 40px rgb(0 0 0 / 0.6);
+
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-snap: cubic-bezier(0.16, 1, 0.3, 1);
+  --t-fast: 110ms;
+  --t-mid: 220ms;
+  --t-slow: 420ms;
+
+  color-scheme: dark;
+}
+
+/* ==========================================================================
+   LIGHT THEME — daylight in the studio, not a different product.
+   The five interval hues are darkened for contrast but keep their identity,
+   because a learner who has learned "teal means perfect" must not have to
+   relearn it when they open the blinds.
+   ========================================================================== */
+:root[data-theme="light"] {
+  --void:        #F4F5F8;
+  --deck:        #FFFFFF;
+  --riser:       #EDEFF4;
+  --riser-hi:    #E3E7EF;
+  --rule:        #D6DAE4;
+  --rule-bright: #B9C0CE;
+
+  --text-hi:  #0B0D12;
+  --text:     #363D4C;
+  --text-dim: #626B7D;
+  --text-faint: #949CAB;
+
+  --iv-perfect: #0E8F88;
+  --iv-major:   #B77400;
+  --iv-minor:   #5B48C7;
+  --iv-tritone: #C61E56;
+  --iv-tonic:   #0B0D12;
+
+  --iv-perfect-dim: #A8E2DE;
+  --iv-major-dim:   #F0D9A6;
+  --iv-minor-dim:   #CFC7F5;
+  --iv-tritone-dim: #F5BCCE;
+  --iv-tonic-dim:   #C2C7D2;
+
+  --ok:  #0F8A52;  --ok-dim: #B4E8CE;
+  --no:  #C4362A;  --no-dim: #F5C3BD;
+  --warn:#9A6800;
+
+  --lift-1: 0 1px 2px rgb(16 20 30 / 0.08);
+  --lift-2: 0 2px 12px rgb(16 20 30 / 0.10);
+  --lift-3: 0 10px 34px rgb(16 20 30 / 0.14);
+
+  color-scheme: light;
+}
+
+/* ==========================================================================
+   RESET
+   ========================================================================== */
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body { height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--void);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, h4, h5, h6, p, figure, blockquote, dl, dd { margin: 0; }
+ul[class], ol[class] { list-style: none; margin: 0; padding: 0; }
+img, svg, video { display: block; max-width: 100%; }
+button, input, select, textarea { font: inherit; color: inherit; }
+
+/* ==========================================================================
+   TYPE ROLES
+   ========================================================================== */
+
+/* Control-panel silkscreen. Eyebrows, axis labels, group headings. */
+.label {
+  font-family: var(--font-display);
+  font-size: var(--step--1);
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.label-sm {
+  font-family: var(--font-display);
+  font-size: var(--step--2);
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+/* Headlines. Condensed and tight — the opposite tracking to .label. */
+.display {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  line-height: 1.02;
+  color: var(--text-hi);
+  text-wrap: balance;
+}
+
+/* Anything you read as a measurement: "3 semitones", "m3", "W W H W W W H" */
+.data {
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+  letter-spacing: 0.02em;
+}
+
+.prose {
+  max-width: var(--measure);
+  color: var(--text);
+}
+.prose p + p { margin-top: var(--s-4); }
+.prose strong { color: var(--text-hi); font-weight: 600; }
+
+/* ==========================================================================
+   INTERVAL COLOUR — the one system every view shares.
+   Set data-iv on any element and it inherits the right hue.
+   ========================================================================== */
+[data-iv="tonic"]   { --hue: var(--iv-tonic);   --hue-dim: var(--iv-tonic-dim); }
+[data-iv="perfect"] { --hue: var(--iv-perfect); --hue-dim: var(--iv-perfect-dim); }
+[data-iv="major"]   { --hue: var(--iv-major);   --hue-dim: var(--iv-major-dim); }
+[data-iv="minor"]   { --hue: var(--iv-minor);   --hue-dim: var(--iv-minor-dim); }
+[data-iv="tritone"] { --hue: var(--iv-tritone); --hue-dim: var(--iv-tritone-dim); }
+[data-iv="none"]    { --hue: var(--text-faint); --hue-dim: var(--rule); }
+
+/* ==========================================================================
+   FOCUS — visible, and in a colour the interval system never uses.
+   ========================================================================== */
+:where(a, button, [role="button"], input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--text-hi);
+  outline-offset: 2px;
+  border-radius: var(--r-2);
+}
+
+/* ==========================================================================
+   MOTION — every animation here is tied to something audible.
+   If the user has asked for less, they get none of it.
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* A note "rings" when it sounds: a fast bloom that decays like an envelope. */
+@keyframes ring {
+  0%   { box-shadow: 0 0 0 0 var(--hue); filter: brightness(1.6); }
+  100% { box-shadow: 0 0 0 14px transparent; filter: brightness(1); }
+}
+.is-ringing { animation: ring var(--t-slow) var(--ease) 1; }
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ==========================================================================
+   SHARED FURNITURE
+   ========================================================================== */
+.panel {
+  background: var(--deck);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-4);
+  box-shadow: var(--lift-2);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-2);
+  padding: 0.55rem 0.95rem;
+  background: var(--riser);
+  color: var(--text-hi);
+  border: 1px solid var(--rule-bright);
+  border-radius: var(--r-2);
+  font-family: var(--font-display);
+  font-size: var(--step--1);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background var(--t-fast) var(--ease),
+              border-color var(--t-fast) var(--ease),
+              transform var(--t-fast) var(--ease);
+}
+.btn:hover { background: var(--riser-hi); border-color: var(--text-faint); }
+.btn:active { transform: translateY(1px); }
+.btn[disabled] { opacity: 0.4; cursor: not-allowed; }
+
+.btn-primary {
+  background: var(--text-hi);
+  color: var(--void);
+  border-color: var(--text-hi);
+}
+.btn-primary:hover { background: #fff; border-color: #fff; }
+
+.btn-ghost { background: transparent; border-color: var(--rule); }
+
+/* An illuminated transport control, the way a hardware play button looks. */
+.btn-transport {
+  width: 44px; height: 44px;
+  padding: 0;
+  border-radius: var(--r-3);
+  background: var(--riser);
+  border: 1px solid var(--rule-bright);
+}
+.btn-transport[aria-pressed="true"],
+.btn-transport.is-active {
+  background: color-mix(in srgb, var(--iv-major) 18%, var(--riser));
+  border-color: var(--iv-major);
+  color: var(--iv-major);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--hue-dim, var(--rule));
+  background: color-mix(in srgb, var(--hue, var(--text-faint)) 12%, transparent);
+  color: var(--hue, var(--text-dim));
+  font-family: var(--font-data);
+  font-size: var(--step--2);
+  letter-spacing: 0.04em;
+}
+
+.hairline { height: 1px; background: var(--rule); border: 0; }
+
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+.stack > * + * { margin-block-start: var(--flow, var(--s-4)); }
+.row { display: flex; align-items: center; gap: var(--s-3); }
+.row-wrap { display: flex; align-items: center; gap: var(--s-3); flex-wrap: wrap; }

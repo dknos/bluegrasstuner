@@ -1,0 +1,135 @@
+/* ==========================================================================
+   FRETBOARD VIEW
+
+   Geometry comes from fretboard.js. Colour comes from tokens.css and nowhere
+   else: every hue below is `var(--hue)`, which tokens.css sets from the
+   `data-iv` attribute the view puts on each cell. There is not a single
+   literal colour in this file, and there must never be one.
+
+   The look is a neck drawn as an instrument panel: dark glass, hairline fret
+   wires, string gauges that thicken as the pitch drops, condensed silkscreen
+   numerals under the board and the same side dots you read while playing.
+
+   Lengths here are SVG user units, not pixels — the whole board scales with
+   its container.
+   ========================================================================== */
+
+.fb {
+  display: block;
+  width: 100%;
+  height: auto;
+  font-family: var(--font-display);
+  overflow: visible;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ---- The fingerboard itself --------------------------------------------- */
+
+.fb-surface {
+  fill: var(--riser);
+  stroke: var(--rule);
+  stroke-width: 1;
+}
+
+.fb-fret {
+  stroke: var(--rule-bright);
+  stroke-linecap: butt;
+}
+
+/* The nut is a different object from a fret wire, so it looks like one. */
+.fb-fret--nut {
+  stroke: var(--text-faint);
+  stroke-linecap: butt;
+}
+
+.fb-string {
+  stroke: var(--text-dim);
+  stroke-linecap: butt;
+  opacity: 0.5;
+}
+
+.fb-inlay {
+  fill: var(--rule-bright);
+  opacity: 0.55;
+}
+
+.fb-sidedot {
+  fill: var(--rule-bright);
+}
+
+/* ---- Silkscreen ---------------------------------------------------------- */
+
+.fb-fretnum {
+  fill: var(--text-faint);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Marker frets are how a player finds their place, so they read first. */
+.fb-fretnum--marker { fill: var(--text-dim); }
+
+.fb-open-name {
+  fill: var(--text-faint);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+/* ---- Cells --------------------------------------------------------------- */
+
+.fb-cell { cursor: pointer; }
+
+.fb-hit {
+  fill: var(--text-hi);
+  opacity: 0;
+  stroke: none;
+  pointer-events: all;
+  transition: opacity var(--t-fast) var(--ease);
+}
+
+.fb-cell:hover .fb-hit { opacity: 0.06; }
+
+/* Focus is drawn in a colour the interval system never uses, per tokens.css. */
+.fb-cell:focus { outline: none; }
+
+.fb-cell:focus-visible .fb-hit {
+  opacity: 0.1;
+  stroke: var(--text-hi);
+  stroke-width: 1.5;
+}
+
+/* ---- Note dots ----------------------------------------------------------- */
+
+.fb-dot {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--t-fast) var(--ease);
+}
+
+.fb-cell[data-on] .fb-dot { opacity: 1; }
+
+.fb-dot-face {
+  fill: color-mix(in srgb, var(--hue) 17%, var(--deck));
+  stroke: var(--hue);
+  stroke-width: 1.4;
+}
+
+.fb-dot-label {
+  fill: var(--hue);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+/* The tonic is the thing everything else is measured from, so it is the only
+   dot that fills solid. Its label flips to the board colour to stay legible in
+   both themes. */
+.fb-cell[data-iv="tonic"] .fb-dot-face { fill: var(--hue); }
+.fb-cell[data-iv="tonic"] .fb-dot-label { fill: var(--deck); }
+
+/* Keyboard focus in the shared state object — a ghost ring, not a filled dot. */
+.fb-cell[data-focus] .fb-dot-face { stroke-dasharray: 3 2.5; }
+
+/* `.is-ringing` is defined in tokens.css and applied by the view. Nothing is
+   redefined here on purpose: all four views must ring identically. */

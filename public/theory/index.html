@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Overtone — Bluegrass Tuner</title>
+<meta name="description" content="An interactive music theory course on Bluegrass Tuner. Every idea is something you can hear, see on four instruments at once, and take apart with your hands.">
+<meta name="color-scheme" content="dark light">
+<link rel="stylesheet" href="/theory/src/ui/tokens.css">
+<link rel="stylesheet" href="/theory/src/ui/app.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%2307080B'/><circle cx='11' cy='21' r='4.4' fill='%23F5B942'/><rect x='14.4' y='6' width='2.2' height='15' fill='%23F5B942'/><path d='M16.6 6.2 25 8.4v3.4l-8.4-2.2z' fill='%233FD0C9'/></svg>">
+</head>
+<body>
+
+<a class="skip" href="#stage">Skip to content</a>
+
+<div class="app">
+
+  <nav class="rail" aria-label="Course">
+    <div class="rail-brand">
+      <div class="mark">OVERTONE</div>
+      <div class="tag">theory you can hear</div>
+      <a class="rail-back" href="/">← Bluegrass Tuner</a>
+    </div>
+    <div class="rail-nav" id="rail-nav"><!-- built by main.js --></div>
+    <div class="rail-foot">
+      <button class="rail-link" data-route="settings">
+        <span class="rail-idx">⚙</span><span class="rail-label">Settings</span>
+      </button>
+    </div>
+  </nav>
+
+  <main class="stage" id="stage" tabindex="-1">
+    <div class="stage-inner" id="view"><!-- routed --></div>
+  </main>
+
+  <!-- The transport never leaves. In a studio the play button is always
+       within reach, and here it means audio is one glance away on every page. -->
+  <div class="transport" role="region" aria-label="Playback">
+    <div class="transport-readout">
+      <span class="now" id="t-now">Overtone</span>
+      <span class="detail" id="t-detail">Press anything to make a sound</span>
+    </div>
+
+    <div class="transport-controls">
+      <button class="btn-transport" id="t-play" aria-label="Play again" title="Play again (Space)">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M8 5v14l11-7z" fill="currentColor"/></svg>
+      </button>
+      <button class="btn-transport" id="t-loop" aria-label="Loop" aria-pressed="false" title="Loop">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z" fill="currentColor"/></svg>
+      </button>
+      <button class="btn-transport" id="t-stop" aria-label="Stop all sound" title="Stop (Esc)">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="1.5" fill="currentColor"/></svg>
+      </button>
+
+      <label class="t-field">
+        <span class="label-sm">Tempo</span>
+        <input class="slider" id="t-tempo" type="range" min="40" max="200" step="1" value="96" aria-label="Tempo in beats per minute">
+        <output class="data" id="t-tempo-out">96</output>
+      </label>
+
+      <label class="t-field">
+        <span class="label-sm">Level</span>
+        <input class="slider" id="t-volume" type="range" min="0" max="100" step="1" value="70" aria-label="Volume">
+      </label>
+
+      <button class="btn-transport" id="t-theme" aria-label="Switch between dark and light" title="Theme">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9z" fill="currentColor"/></svg>
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<script type="module" src="/theory/src/main.js"></script>
+</body>
+</html>
