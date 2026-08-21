@@ -10,7 +10,7 @@
 
 .app {
   display: grid;
-  grid-template-columns: var(--rail-w) 1fr;
+  grid-template-columns: var(--rail-w) minmax(0, 1fr);
   grid-template-rows: 1fr var(--transport-h);
   grid-template-areas:
     "rail stage"
@@ -93,6 +93,7 @@
 /* ---- Stage --------------------------------------------------------------- */
 .stage {
   grid-area: stage;
+  min-width: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
   scroll-behavior: smooth;
@@ -440,7 +441,7 @@
    ========================================================================== */
 @media (max-width: 900px) {
   .app {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto 1fr var(--transport-h);
     grid-template-areas: "rail" "stage" "transport";
   }
@@ -611,6 +612,13 @@
 .t-field .label-sm { display: none; }
 @media (min-width: 1100px) { .t-field .label-sm { display: inline; } }
 @media (max-width: 700px) { .t-field { display: none; } }
+
+@media (max-width: 360px) {
+  /* Keep the always-available transport readable beside its four controls. */
+  .transport-readout .now { font-size: clamp(0.875rem, 5vw, var(--step-0)); }
+  .transport-controls { gap: var(--s-1); }
+  .btn-transport { width: clamp(36px, 12.5vw, 40px); height: clamp(36px, 12.5vw, 40px); }
+}
 
 /* ==========================================================================
    COURSE / WORLDS
@@ -798,8 +806,10 @@
 @media (max-width: 900px) {
   .rail { max-height: none; }
   .rail-brand { padding: var(--s-3) var(--s-4); display: flex; align-items: baseline; gap: var(--s-3); }
+  .rail-brand { flex-wrap: wrap; }
   .rail-brand .mark { font-size: var(--step-1); }
-  .rail-brand .tag { margin: 0; }
+  .rail-brand .tag { margin: 0; min-width: 0; }
+  .rail-back { margin-top: 0; max-width: 100%; }
   .rail-nav { padding: var(--s-2) var(--s-3); }
   .rail-foot { border-top: 0; padding: 0 var(--s-3) var(--s-2); }
   .rail-idx { display: none; }
@@ -925,6 +935,55 @@
 
 /* Phones scroll anyway, so stop fighting for pixels and make it readable. */
 @media (max-width: 700px) {
+  .stage-inner,
+  #view,
+  .lab,
+  .lab-bar-row,
+  .lab-picker { min-width: 0; }
+
+  .world-head {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .world-title { min-width: 0; }
+  .world-progress {
+    grid-column: 2;
+    justify-items: start;
+  }
+  .lesson-card {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    min-width: 0;
+  }
+  .lesson-card-meta { min-width: 0; }
+
+  .film-grid { grid-template-columns: minmax(0, 1fr); }
+  .film-card,
+  .film-card-body { min-width: 0; }
+
+  .segmented {
+    display: flex;
+    max-width: 100%;
+    flex-wrap: wrap;
+  }
+  .step-head { flex-wrap: wrap; }
+  .session-block {
+    grid-template-columns: auto minmax(0, 1fr);
+    min-width: 0;
+  }
+  .session-body { min-width: 0; }
+  .session-go { grid-column: 2; }
+
+  .lab-bar-row { width: 100%; align-items: stretch; }
+  .lab-bar-row .lab-picker {
+    flex: 1 1 100%;
+    width: 100%;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .lab-bar-row .lab-controls {
+    flex: 1 1 100%;
+    min-width: 0;
+    justify-content: flex-start;
+  }
+
   .view-bay-body svg,
   .view-bay[data-view="piano"] .view-bay-body svg,
   .view-bay[data-view="staff"] .view-bay-body svg,
